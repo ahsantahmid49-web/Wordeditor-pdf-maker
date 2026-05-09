@@ -1,0 +1,1615 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>WordCraft — Document Editor</title>
+<link href="https://fonts.googleapis.com/css2?family=Segoe+UI:wght@400;600&family=Libre+Baskerville:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+<style>
+  :root {
+    --ribbon-bg: #2b579a;
+    --ribbon-tab-active: #fff;
+    --ribbon-tab-hover: #3a6bbf;
+    --toolbar-bg: #f3f3f3;
+    --toolbar-border: #d4d4d4;
+    --btn-hover: #e1e1e1;
+    --btn-active: #c8c8c8;
+    --page-bg: #ffffff;
+    --app-bg: #b2b2b2;
+    --status-bg: #2b579a;
+    --accent: #2b579a;
+    --text-dark: #1a1a1a;
+    --sidebar-bg: #f0f0f0;
+    --shadow: 0 2px 12px rgba(0,0,0,0.25);
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Segoe UI', Arial, sans-serif;
+    background: var(--app-bg);
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    font-size: 13px;
+    color: var(--text-dark);
+  }
+
+  /* ── TITLE BAR ── */
+  #titlebar {
+    background: var(--ribbon-bg);
+    color: #fff;
+    display: flex;
+    align-items: center;
+    height: 32px;
+    padding: 0 12px;
+    gap: 12px;
+    user-select: none;
+  }
+  #titlebar .app-logo {
+    font-size: 15px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    color: #fff;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  #titlebar .app-logo svg { width:20px; height:20px; }
+  #doc-title-input {
+    background: transparent;
+    border: 1px solid transparent;
+    color: #fff;
+    font-size: 13px;
+    padding: 2px 6px;
+    border-radius: 3px;
+    width: 220px;
+    outline: none;
+    transition: border 0.2s;
+  }
+  #doc-title-input:hover { border-color: rgba(255,255,255,0.4); }
+  #doc-title-input:focus { border-color: rgba(255,255,255,0.9); background: rgba(255,255,255,0.1); }
+  .titlebar-spacer { flex: 1; }
+  .titlebar-btn {
+    background: none; border: none; color: #fff;
+    font-size: 13px; padding: 4px 14px;
+    border-radius: 3px; cursor: pointer;
+    transition: background 0.15s;
+  }
+  .titlebar-btn:hover { background: rgba(255,255,255,0.15); }
+
+  /* ── RIBBON TABS ── */
+  #ribbon {
+    background: var(--ribbon-bg);
+    display: flex;
+    flex-direction: column;
+    flex-shrink: 0;
+  }
+  #ribbon-tabs {
+    display: flex;
+    padding: 0 8px;
+    gap: 2px;
+  }
+  .tab-btn {
+    background: none; border: none;
+    color: rgba(255,255,255,0.85);
+    padding: 5px 14px;
+    font-size: 12px;
+    font-family: 'Segoe UI', Arial, sans-serif;
+    cursor: pointer;
+    border-radius: 3px 3px 0 0;
+    border-bottom: 2px solid transparent;
+    transition: all 0.15s;
+    white-space: nowrap;
+  }
+  .tab-btn:hover { color: #fff; background: rgba(255,255,255,0.1); }
+  .tab-btn.active {
+    background: var(--toolbar-bg);
+    color: var(--ribbon-bg);
+    font-weight: 600;
+    border-bottom: 2px solid var(--toolbar-bg);
+  }
+
+  /* ── RIBBON PANELS ── */
+  #ribbon-content {
+    background: var(--toolbar-bg);
+    border-bottom: 1px solid var(--toolbar-border);
+    display: flex;
+    align-items: stretch;
+    padding: 4px 8px;
+    gap: 0;
+    min-height: 58px;
+    flex-wrap: wrap;
+  }
+  .ribbon-group {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 0 8px;
+    border-right: 1px solid var(--toolbar-border);
+    gap: 3px;
+  }
+  .ribbon-group:last-child { border-right: none; }
+  .ribbon-group-label {
+    font-size: 10px;
+    color: #666;
+    margin-top: auto;
+    padding-top: 2px;
+  }
+  .ribbon-row {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+    flex-wrap: wrap;
+  }
+
+  /* ── RIBBON BUTTONS ── */
+  .rb {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    background: none;
+    border: 1px solid transparent;
+    border-radius: 3px;
+    cursor: pointer;
+    padding: 2px 5px;
+    min-width: 28px;
+    min-height: 28px;
+    color: #333;
+    font-size: 11px;
+    transition: all 0.12s;
+    gap: 1px;
+    font-family: 'Segoe UI', Arial, sans-serif;
+  }
+  .rb:hover { background: var(--btn-hover); border-color: #bbb; }
+  .rb:active, .rb.active { background: var(--btn-active); border-color: #999; }
+  .rb.big {
+    min-height: 46px;
+    min-width: 36px;
+    font-size: 10px;
+    padding: 3px 6px;
+  }
+  .rb svg { pointer-events: none; }
+  .rb.active { background: #c7d6f5; border-color: #2b579a; }
+
+  /* ── DROPDOWNS ── */
+  select.rb-select {
+    border: 1px solid #bbb;
+    background: #fff;
+    border-radius: 3px;
+    font-size: 12px;
+    padding: 2px 4px;
+    height: 24px;
+    cursor: pointer;
+    font-family: 'Segoe UI', Arial, sans-serif;
+    color: #333;
+    outline: none;
+  }
+  select.rb-select:hover { border-color: #2b579a; }
+  input.rb-input {
+    border: 1px solid #bbb;
+    background: #fff;
+    border-radius: 3px;
+    font-size: 12px;
+    padding: 2px 4px;
+    height: 24px;
+    width: 44px;
+    text-align: center;
+    outline: none;
+    font-family: 'Segoe UI', Arial, sans-serif;
+  }
+  input.rb-input:hover { border-color: #2b579a; }
+  input.rb-input:focus { border-color: #2b579a; }
+
+  /* ── COLOR PICKER INLINE ── */
+  input[type="color"].color-btn {
+    width: 28px; height: 22px;
+    border: 1px solid #bbb;
+    border-radius: 3px;
+    padding: 1px;
+    cursor: pointer;
+    background: none;
+  }
+
+  /* ── QUICK ACCESS BAR ── */
+  #qat {
+    background: #fff;
+    border-bottom: 1px solid var(--toolbar-border);
+    display: flex;
+    align-items: center;
+    padding: 3px 10px;
+    gap: 4px;
+    flex-shrink: 0;
+  }
+  .qat-btn {
+    background: none; border: 1px solid transparent;
+    border-radius: 3px; cursor: pointer;
+    padding: 3px 7px; font-size: 12px;
+    display: flex; align-items: center; gap: 4px;
+    color: #333; transition: all 0.12s;
+    font-family: 'Segoe UI', Arial, sans-serif;
+  }
+  .qat-btn:hover { background: #e1e1e1; border-color: #bbb; }
+  .qat-sep { width: 1px; height: 18px; background: #ccc; margin: 0 3px; }
+
+  /* ── RULER ── */
+  #ruler-container {
+    background: #f3f3f3;
+    border-bottom: 1px solid #ccc;
+    display: flex;
+    justify-content: center;
+    padding: 0;
+    flex-shrink: 0;
+    overflow: hidden;
+    height: 20px;
+  }
+  #ruler {
+    width: 816px;
+    height: 20px;
+    position: relative;
+    background: #f3f3f3;
+  }
+  #ruler canvas { display: block; }
+
+  /* ── MAIN AREA ── */
+  #main {
+    display: flex;
+    flex: 1;
+    overflow: hidden;
+  }
+
+  /* ── SIDEBAR ── */
+  #sidebar {
+    width: 200px;
+    background: var(--sidebar-bg);
+    border-right: 1px solid #ccc;
+    overflow-y: auto;
+    padding: 10px;
+    flex-shrink: 0;
+    display: none;
+  }
+  #sidebar.open { display: block; }
+  #sidebar h3 {
+    font-size: 12px; font-weight: 700;
+    color: #555; margin-bottom: 8px;
+    text-transform: uppercase; letter-spacing: 0.5px;
+  }
+  .nav-item {
+    padding: 4px 6px; border-radius: 3px;
+    cursor: pointer; font-size: 12px;
+    color: #333; margin-bottom: 2px;
+    transition: background 0.12s;
+  }
+  .nav-item:hover { background: #ddd; }
+
+  /* ── CANVAS / EDITOR AREA ── */
+  #editor-area {
+    flex: 1;
+    overflow-y: auto;
+    overflow-x: auto;
+    padding: 30px 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    background: var(--app-bg);
+  }
+
+  /* ── PAGE ── */
+  .page {
+    background: var(--page-bg);
+    width: 816px;
+    min-height: 1056px;
+    box-shadow: var(--shadow);
+    position: relative;
+    margin-bottom: 24px;
+    padding: 96px 96px;
+    flex-shrink: 0;
+  }
+  .page::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 96px;
+    pointer-events: none;
+    border-bottom: 1px dashed #ddd;
+  }
+  .page::after {
+    content: '';
+    position: absolute;
+    bottom: 0; left: 0; right: 0;
+    height: 96px;
+    pointer-events: none;
+    border-top: 1px dashed #ddd;
+  }
+
+  /* ── EDITOR CONTENT EDITABLE ── */
+  #editor {
+    outline: none;
+    min-height: 864px;
+    font-family: 'Calibri', 'Libre Baskerville', serif;
+    font-size: 12pt;
+    line-height: 1.5;
+    color: #000;
+    caret-color: #000;
+    word-break: break-word;
+  }
+  #editor:focus { outline: none; }
+  #editor p { margin: 0 0 8px 0; }
+  #editor h1 { font-size: 26pt; font-weight: 700; margin-bottom: 12px; color: #1a1a1a; }
+  #editor h2 { font-size: 20pt; font-weight: 700; margin-bottom: 10px; color: #2b579a; }
+  #editor h3 { font-size: 15pt; font-weight: 700; margin-bottom: 8px; }
+  #editor ul, #editor ol { padding-left: 24px; margin-bottom: 8px; }
+  #editor li { margin-bottom: 3px; }
+  #editor table {
+    border-collapse: collapse;
+    margin: 8px 0;
+    width: 100%;
+  }
+  #editor td, #editor th {
+    border: 1px solid #aaa;
+    padding: 5px 8px;
+    min-width: 60px;
+    min-height: 24px;
+  }
+  #editor th { background: #2b579a; color: #fff; font-weight: 600; }
+  #editor a { color: #2b579a; text-decoration: underline; }
+  #editor blockquote {
+    border-left: 4px solid #2b579a;
+    padding-left: 16px;
+    color: #555;
+    margin: 8px 0;
+    font-style: italic;
+  }
+  #editor hr { border: none; border-top: 2px solid #ccc; margin: 12px 0; }
+
+  /* ── STATUS BAR ── */
+  #statusbar {
+    background: var(--status-bg);
+    color: #fff;
+    display: flex;
+    align-items: center;
+    height: 22px;
+    padding: 0 12px;
+    gap: 18px;
+    font-size: 11px;
+    flex-shrink: 0;
+    user-select: none;
+  }
+  #statusbar span { opacity: 0.9; }
+  .status-sep { width: 1px; height: 14px; background: rgba(255,255,255,0.3); }
+
+  /* ── ZOOM ── */
+  #zoom-area {
+    margin-left: auto;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  #zoom-range { width: 80px; cursor: pointer; }
+
+  /* ── MODALS ── */
+  .modal-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.5);
+    z-index: 999;
+    justify-content: center;
+    align-items: center;
+  }
+  .modal-overlay.open { display: flex; }
+  .modal {
+    background: #fff;
+    border-radius: 6px;
+    box-shadow: 0 8px 40px rgba(0,0,0,0.3);
+    min-width: 360px;
+    max-width: 90vw;
+    overflow: hidden;
+  }
+  .modal-header {
+    background: var(--ribbon-bg);
+    color: #fff;
+    padding: 12px 16px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-weight: 600;
+  }
+  .modal-close {
+    background: none; border: none; color: #fff;
+    font-size: 16px; cursor: pointer; padding: 0 4px;
+  }
+  .modal-body { padding: 16px; }
+  .modal-footer { padding: 10px 16px; display: flex; justify-content: flex-end; gap: 8px; border-top: 1px solid #eee; }
+  .btn-primary {
+    background: var(--ribbon-bg); color: #fff;
+    border: none; border-radius: 4px;
+    padding: 6px 18px; cursor: pointer; font-size: 13px;
+    font-family: 'Segoe UI', Arial, sans-serif;
+    transition: background 0.15s;
+  }
+  .btn-primary:hover { background: #1e4080; }
+  .btn-secondary {
+    background: #f3f3f3; color: #333;
+    border: 1px solid #ccc; border-radius: 4px;
+    padding: 6px 16px; cursor: pointer; font-size: 13px;
+    font-family: 'Segoe UI', Arial, sans-serif;
+    transition: background 0.15s;
+  }
+  .btn-secondary:hover { background: #e0e0e0; }
+  .form-row { margin-bottom: 10px; display: flex; flex-direction: column; gap: 4px; }
+  .form-row label { font-size: 12px; font-weight: 600; color: #555; }
+  .form-row input, .form-row select, .form-row textarea {
+    border: 1px solid #ccc; border-radius: 4px;
+    padding: 6px 8px; font-size: 13px; outline: none;
+    font-family: 'Segoe UI', Arial, sans-serif;
+  }
+  .form-row input:focus, .form-row select:focus { border-color: var(--accent); }
+  .form-row textarea { resize: vertical; min-height: 60px; }
+
+  /* ── FIND REPLACE PANEL ── */
+  #findbar {
+    display: none;
+    position: fixed;
+    top: 140px; right: 24px;
+    background: #fff;
+    border: 1px solid #ccc;
+    border-radius: 6px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+    padding: 12px 14px;
+    z-index: 800;
+    min-width: 260px;
+  }
+  #findbar.open { display: block; }
+  #findbar h4 { font-size: 12px; font-weight: 700; margin-bottom: 8px; color: #333; }
+  #findbar input {
+    width: 100%; border: 1px solid #ccc; border-radius: 3px;
+    padding: 4px 8px; font-size: 12px; margin-bottom: 6px; outline: none;
+    font-family: 'Segoe UI', Arial, sans-serif;
+  }
+  #findbar input:focus { border-color: var(--accent); }
+  #findbar .find-actions { display: flex; gap: 5px; flex-wrap: wrap; }
+  #findbar .find-actions button {
+    background: #f3f3f3; border: 1px solid #ccc;
+    border-radius: 3px; padding: 3px 9px;
+    font-size: 11px; cursor: pointer;
+    font-family: 'Segoe UI', Arial, sans-serif;
+    transition: background 0.1s;
+  }
+  #findbar .find-actions button:hover { background: #e0e0e0; }
+  #findbar .find-close {
+    position: absolute; top: 8px; right: 8px;
+    background: none; border: none; cursor: pointer; font-size: 15px; color: #888;
+  }
+
+  /* ── TABLE PICKER ── */
+  #table-picker {
+    display: none;
+    position: absolute;
+    background: #fff;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.15);
+    padding: 8px;
+    z-index: 900;
+  }
+  #table-picker.open { display: block; }
+  #table-grid { display: grid; grid-template-columns: repeat(10, 18px); gap: 2px; }
+  .tg-cell {
+    width: 18px; height: 18px;
+    border: 1px solid #ccc; border-radius: 2px;
+    cursor: pointer; background: #fff;
+    transition: background 0.1s;
+  }
+  .tg-cell.highlight { background: #c7d6f5; border-color: #2b579a; }
+  #table-picker p { font-size: 11px; text-align: center; margin-top: 6px; color: #555; }
+
+  /* ── IMAGE INSERT ── */
+  #img-preview {
+    max-width: 100%; max-height: 200px;
+    display: none; margin-top: 8px;
+    border: 1px solid #ccc; border-radius: 4px;
+  }
+
+  /* ── TOOLTIP ── */
+  [data-tip] { position: relative; }
+  [data-tip]:hover::after {
+    content: attr(data-tip);
+    position: absolute;
+    bottom: calc(100% + 4px);
+    left: 50%; transform: translateX(-50%);
+    background: #333; color: #fff;
+    font-size: 10px; white-space: nowrap;
+    padding: 3px 7px; border-radius: 3px;
+    pointer-events: none; z-index: 999;
+  }
+
+  /* ── PRINT STYLES ── */
+  @media print {
+    body * { visibility: hidden; }
+    .page, .page * { visibility: visible; }
+    .page {
+      position: fixed; left: 0; top: 0;
+      box-shadow: none;
+      margin: 0; padding: 96px;
+    }
+  }
+
+  /* ── HIDDEN TABS ── */
+  .tab-panel { display: none; }
+  .tab-panel.active { display: flex; }
+
+  /* ── SCROLLBAR ── */
+  #editor-area::-webkit-scrollbar { width: 12px; }
+  #editor-area::-webkit-scrollbar-track { background: #b2b2b2; }
+  #editor-area::-webkit-scrollbar-thumb { background: #888; border-radius: 6px; }
+  #editor-area::-webkit-scrollbar-thumb:hover { background: #666; }
+
+  /* ── HIGHLIGHT SELECT ── */
+  .color-row { display: flex; gap: 3px; flex-wrap: wrap; }
+  .color-swatch {
+    width: 16px; height: 16px; border-radius: 2px;
+    cursor: pointer; border: 1px solid rgba(0,0,0,0.2);
+    transition: transform 0.1s;
+    flex-shrink: 0;
+  }
+  .color-swatch:hover { transform: scale(1.2); }
+
+  .rb-label { font-size: 10px; color: #555; margin: 0 3px; }
+
+  /* ── WORD COUNT BADGE ── */
+  #wc-badge { font-size: 11px; opacity: 0.85; }
+</style>
+</head>
+<body>
+
+<!-- TITLE BAR -->
+<div id="titlebar">
+  <div class="app-logo">
+    <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <rect x="2" y="2" width="20" height="20" rx="3" fill="#fff" opacity="0.2"/>
+      <text x="5" y="17" fill="#fff" font-size="13" font-weight="bold" font-family="Arial">W</text>
+    </svg>
+    WordCraft
+  </div>
+  <input id="doc-title-input" type="text" value="Untitled Document" spellcheck="false" />
+  <div class="titlebar-spacer"></div>
+  <button class="titlebar-btn" onclick="window.print()">🖨 Print</button>
+  <button class="titlebar-btn" onclick="exportPDF()">📄 Export PDF</button>
+</div>
+
+<!-- RIBBON TABS -->
+<div id="ribbon">
+  <div id="ribbon-tabs">
+    <button class="tab-btn active" onclick="switchTab('home',this)">Home</button>
+    <button class="tab-btn" onclick="switchTab('insert',this)">Insert</button>
+    <button class="tab-btn" onclick="switchTab('layout',this)">Layout</button>
+    <button class="tab-btn" onclick="switchTab('review',this)">Review</button>
+    <button class="tab-btn" onclick="switchTab('view',this)">View</button>
+  </div>
+
+  <!-- HOME TAB -->
+  <div id="ribbon-content" class="tab-panel active" data-tab="home">
+    <!-- Clipboard -->
+    <div class="ribbon-group">
+      <div class="ribbon-row">
+        <button class="rb big" onclick="execCmd('paste')" data-tip="Paste (Ctrl+V)">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#555" stroke-width="1.8"><rect x="8" y="2" width="8" height="4" rx="1"/><rect x="5" y="4" width="14" height="16" rx="2"/><line x1="9" y1="10" x2="15" y2="10"/><line x1="9" y1="14" x2="15" y2="14"/></svg>
+          Paste
+        </button>
+      </div>
+      <div class="ribbon-row">
+        <button class="rb" onclick="execCmd('cut')" data-tip="Cut (Ctrl+X)">✂️</button>
+        <button class="rb" onclick="execCmd('copy')" data-tip="Copy (Ctrl+C)">📋</button>
+        <button class="rb" id="format-painter-btn" onclick="toggleFormatPainter()" data-tip="Format Painter">🖌️</button>
+      </div>
+      <span class="ribbon-group-label">Clipboard</span>
+    </div>
+
+    <!-- Font -->
+    <div class="ribbon-group">
+      <div class="ribbon-row">
+        <select class="rb-select" id="font-family" style="width:130px" onchange="applyFont()" data-tip="Font">
+          <option>Calibri</option>
+          <option>Arial</option>
+          <option>Times New Roman</option>
+          <option>Georgia</option>
+          <option>Courier New</option>
+          <option>Verdana</option>
+          <option>Trebuchet MS</option>
+          <option>Comic Sans MS</option>
+          <option>Impact</option>
+          <option>Palatino Linotype</option>
+          <option>Garamond</option>
+          <option>Tahoma</option>
+          <option>Bookman Old Style</option>
+        </select>
+        <input class="rb-input" id="font-size" type="number" value="12" min="6" max="96" onchange="applyFontSize()" data-tip="Font Size" />
+        <button class="rb" onclick="changeFontSize(1)" data-tip="Increase Font">A▲</button>
+        <button class="rb" onclick="changeFontSize(-1)" data-tip="Decrease Font">A▼</button>
+      </div>
+      <div class="ribbon-row">
+        <button class="rb" id="btn-bold" onclick="execCmd('bold');updateBtns()" data-tip="Bold (Ctrl+B)"><b>B</b></button>
+        <button class="rb" id="btn-italic" onclick="execCmd('italic');updateBtns()" data-tip="Italic (Ctrl+I)"><i>I</i></button>
+        <button class="rb" id="btn-underline" onclick="execCmd('underline');updateBtns()" data-tip="Underline (Ctrl+U)"><u>U</u></button>
+        <button class="rb" id="btn-strike" onclick="execCmd('strikeThrough')" data-tip="Strikethrough"><s>S</s></button>
+        <button class="rb" id="btn-sub" onclick="execCmd('subscript')" data-tip="Subscript">X₂</button>
+        <button class="rb" id="btn-sup" onclick="execCmd('superscript')" data-tip="Superscript">X²</button>
+        <button class="rb" onclick="execCmd('removeFormat')" data-tip="Clear Formatting">✕A</button>
+        <span class="rb-label">A</span>
+        <input type="color" class="color-btn" id="font-color" value="#000000" onchange="applyFontColor()" data-tip="Font Color" title="Font Color"/>
+        <span class="rb-label" style="font-size:9px">HL</span>
+        <input type="color" class="color-btn" id="highlight-color" value="#FFFF00" onchange="applyHighlight()" data-tip="Highlight Color" title="Highlight Color"/>
+      </div>
+      <span class="ribbon-group-label">Font</span>
+    </div>
+
+    <!-- Paragraph -->
+    <div class="ribbon-group">
+      <div class="ribbon-row">
+        <button class="rb" onclick="execCmd('insertUnorderedList')" data-tip="Bullet List">≡•</button>
+        <button class="rb" onclick="execCmd('insertOrderedList')" data-tip="Numbered List">≡1</button>
+        <button class="rb" onclick="execCmd('outdent')" data-tip="Decrease Indent">⟸</button>
+        <button class="rb" onclick="execCmd('indent')" data-tip="Increase Indent">⟹</button>
+      </div>
+      <div class="ribbon-row">
+        <button class="rb" id="btn-left" onclick="execCmd('justifyLeft');updateBtns()" data-tip="Align Left">⬛⬜⬜</button>
+        <button class="rb" id="btn-center" onclick="execCmd('justifyCenter');updateBtns()" data-tip="Center">⬜⬛⬜</button>
+        <button class="rb" id="btn-right" onclick="execCmd('justifyRight');updateBtns()" data-tip="Align Right">⬜⬜⬛</button>
+        <button class="rb" id="btn-justify" onclick="execCmd('justifyFull');updateBtns()" data-tip="Justify">⬛⬛⬛</button>
+        <select class="rb-select" id="line-spacing" style="width:52px" onchange="applyLineSpacing()" data-tip="Line Spacing">
+          <option value="1">1.0</option>
+          <option value="1.15">1.15</option>
+          <option value="1.5" selected>1.5</option>
+          <option value="2">2.0</option>
+          <option value="2.5">2.5</option>
+          <option value="3">3.0</option>
+        </select>
+      </div>
+      <span class="ribbon-group-label">Paragraph</span>
+    </div>
+
+    <!-- Styles -->
+    <div class="ribbon-group">
+      <div class="ribbon-row">
+        <button class="rb" onclick="applyStyle('p')" data-tip="Normal Text">¶ Normal</button>
+        <button class="rb" onclick="applyStyle('h1')" data-tip="Heading 1"><b>H1</b></button>
+        <button class="rb" onclick="applyStyle('h2')" data-tip="Heading 2"><b>H2</b></button>
+        <button class="rb" onclick="applyStyle('h3')" data-tip="Heading 3"><b>H3</b></button>
+        <button class="rb" onclick="applyStyle('blockquote')" data-tip="Quote">"Q"</button>
+      </div>
+      <span class="ribbon-group-label">Styles</span>
+    </div>
+
+    <!-- Editing -->
+    <div class="ribbon-group">
+      <div class="ribbon-row">
+        <button class="rb big" onclick="openFindBar()" data-tip="Find & Replace (Ctrl+H)">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#555" stroke-width="1.8"><circle cx="11" cy="11" r="7"/><line x1="16.5" y1="16.5" x2="22" y2="22"/></svg>
+          Find
+        </button>
+      </div>
+      <span class="ribbon-group-label">Editing</span>
+    </div>
+  </div>
+
+  <!-- INSERT TAB -->
+  <div id="ribbon-content-insert" class="tab-panel" data-tab="insert">
+    <!-- Pages -->
+    <div class="ribbon-group">
+      <div class="ribbon-row">
+        <button class="rb big" onclick="insertPageBreak()" data-tip="Page Break">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#555" stroke-width="1.8"><rect x="4" y="2" width="16" height="20" rx="2"/><line x1="4" y1="12" x2="20" y2="12" stroke-dasharray="3 2"/></svg>
+          Page<br>Break
+        </button>
+      </div>
+      <span class="ribbon-group-label">Pages</span>
+    </div>
+
+    <!-- Table -->
+    <div class="ribbon-group" style="position:relative">
+      <div class="ribbon-row">
+        <button class="rb big" id="table-btn" onclick="toggleTablePicker()" data-tip="Insert Table">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#555" stroke-width="1.8"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="3" y1="15" x2="21" y2="15"/><line x1="9" y1="3" x2="9" y2="21"/><line x1="15" y1="3" x2="15" y2="21"/></svg>
+          Table
+        </button>
+      </div>
+      <span class="ribbon-group-label">Tables</span>
+      <!-- Table Picker Popup -->
+      <div id="table-picker">
+        <div id="table-grid"></div>
+        <p id="table-picker-label">0 × 0</p>
+      </div>
+    </div>
+
+    <!-- Illustrations -->
+    <div class="ribbon-group">
+      <div class="ribbon-row">
+        <button class="rb big" onclick="triggerImageUpload()" data-tip="Insert Image">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#555" stroke-width="1.8"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+          Picture
+        </button>
+        <input type="file" id="img-upload" accept="image/*" style="display:none" onchange="insertImage(this)"/>
+      </div>
+      <span class="ribbon-group-label">Illustrations</span>
+    </div>
+
+    <!-- Links -->
+    <div class="ribbon-group">
+      <div class="ribbon-row">
+        <button class="rb big" onclick="openLinkModal()" data-tip="Insert Hyperlink">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#555" stroke-width="1.8"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+          Link
+        </button>
+      </div>
+      <span class="ribbon-group-label">Links</span>
+    </div>
+
+    <!-- Text -->
+    <div class="ribbon-group">
+      <div class="ribbon-row">
+        <button class="rb" onclick="insertHR()" data-tip="Horizontal Rule">── HR ──</button>
+        <button class="rb" onclick="insertSpecialChar('©')" data-tip="Copyright">©</button>
+        <button class="rb" onclick="insertSpecialChar('®')" data-tip="Registered">®</button>
+        <button class="rb" onclick="insertSpecialChar('™')" data-tip="Trademark">™</button>
+        <button class="rb" onclick="insertSpecialChar('→')" data-tip="Arrow">→</button>
+        <button class="rb" onclick="insertSpecialChar('…')" data-tip="Ellipsis">…</button>
+      </div>
+      <div class="ribbon-row">
+        <button class="rb" onclick="insertDateStamp()" data-tip="Date &amp; Time">📅 Date</button>
+        <button class="rb" onclick="openSymbolModal()" data-tip="More Symbols">Ω Symbol</button>
+      </div>
+      <span class="ribbon-group-label">Text</span>
+    </div>
+
+    <!-- Header Footer -->
+    <div class="ribbon-group">
+      <div class="ribbon-row">
+        <button class="rb" onclick="toggleHeaderFooter('header')" data-tip="Header">▲ Header</button>
+        <button class="rb" onclick="toggleHeaderFooter('footer')" data-tip="Footer">▼ Footer</button>
+      </div>
+      <span class="ribbon-group-label">Header &amp; Footer</span>
+    </div>
+  </div>
+
+  <!-- LAYOUT TAB -->
+  <div id="ribbon-content-layout" class="tab-panel" data-tab="layout">
+    <!-- Page Setup -->
+    <div class="ribbon-group">
+      <div class="ribbon-row">
+        <select class="rb-select" id="page-size" style="width:100px" onchange="applyPageSize()" data-tip="Paper Size">
+          <option value="letter">Letter (8.5×11)</option>
+          <option value="a4">A4 (8.27×11.7)</option>
+          <option value="legal">Legal (8.5×14)</option>
+          <option value="a5">A5 (5.83×8.27)</option>
+        </select>
+      </div>
+      <div class="ribbon-row">
+        <button class="rb" onclick="setOrientation('portrait')" data-tip="Portrait">▯ Portrait</button>
+        <button class="rb" onclick="setOrientation('landscape')" data-tip="Landscape">▭ Landscape</button>
+      </div>
+      <span class="ribbon-group-label">Page Setup</span>
+    </div>
+
+    <!-- Margins -->
+    <div class="ribbon-group">
+      <div class="ribbon-row">
+        <button class="rb" onclick="setMargins('normal')" data-tip="Normal Margins">Normal</button>
+        <button class="rb" onclick="setMargins('narrow')" data-tip="Narrow Margins">Narrow</button>
+        <button class="rb" onclick="setMargins('wide')" data-tip="Wide Margins">Wide</button>
+      </div>
+      <span class="ribbon-group-label">Margins</span>
+    </div>
+
+    <!-- Columns -->
+    <div class="ribbon-group">
+      <div class="ribbon-row">
+        <button class="rb" onclick="setColumns(1)" data-tip="One Column">│ One</button>
+        <button class="rb" onclick="setColumns(2)" data-tip="Two Columns">║ Two</button>
+        <button class="rb" onclick="setColumns(3)" data-tip="Three Columns">||| Three</button>
+      </div>
+      <span class="ribbon-group-label">Columns</span>
+    </div>
+
+    <!-- Spacing -->
+    <div class="ribbon-group">
+      <div class="ribbon-row">
+        <span style="font-size:11px; color:#666; margin-right:4px;">Spacing:</span>
+        <button class="rb" onclick="addSpacing('before')" data-tip="Add space before paragraph">▲ Before</button>
+        <button class="rb" onclick="addSpacing('after')" data-tip="Add space after paragraph">▼ After</button>
+      </div>
+      <span class="ribbon-group-label">Paragraph</span>
+    </div>
+  </div>
+
+  <!-- REVIEW TAB -->
+  <div id="ribbon-content-review" class="tab-panel" data-tab="review">
+    <!-- Proofing -->
+    <div class="ribbon-group">
+      <div class="ribbon-row">
+        <button class="rb big" onclick="checkSpelling()" data-tip="Spell Check">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#555" stroke-width="1.8"><text x="2" y="18" font-size="16" font-family="serif" fill="#555">abc</text><path d="M3 20l18-4" stroke="red" stroke-width="2"/></svg>
+          Spelling
+        </button>
+        <button class="rb big" onclick="countWords()" data-tip="Word Count">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#555" stroke-width="1.8"><line x1="4" y1="6" x2="20" y2="6"/><line x1="4" y1="10" x2="20" y2="10"/><line x1="4" y1="14" x2="14" y2="14"/></svg>
+          Word<br>Count
+        </button>
+      </div>
+      <span class="ribbon-group-label">Proofing</span>
+    </div>
+
+    <!-- Changes -->
+    <div class="ribbon-group">
+      <div class="ribbon-row">
+        <button class="rb" onclick="document.execCommand('undo')" data-tip="Undo (Ctrl+Z)">↩ Undo</button>
+        <button class="rb" onclick="document.execCommand('redo')" data-tip="Redo (Ctrl+Y)">↪ Redo</button>
+      </div>
+      <span class="ribbon-group-label">History</span>
+    </div>
+
+    <!-- Comments -->
+    <div class="ribbon-group">
+      <div class="ribbon-row">
+        <button class="rb" onclick="insertComment()" data-tip="Insert Comment">💬 Comment</button>
+      </div>
+      <span class="ribbon-group-label">Comments</span>
+    </div>
+  </div>
+
+  <!-- VIEW TAB -->
+  <div id="ribbon-content-view" class="tab-panel" data-tab="view">
+    <div class="ribbon-group">
+      <div class="ribbon-row">
+        <button class="rb" onclick="toggleSidebar()" data-tip="Navigation Panel">☰ Navigator</button>
+        <button class="rb" onclick="toggleRuler()" data-tip="Toggle Ruler">📏 Ruler</button>
+        <button class="rb" onclick="toggleFullscreen()" data-tip="Focus Mode">⛶ Focus</button>
+      </div>
+      <span class="ribbon-group-label">Show</span>
+    </div>
+    <div class="ribbon-group">
+      <div class="ribbon-row">
+        <button class="rb" onclick="setZoom(50)">50%</button>
+        <button class="rb" onclick="setZoom(75)">75%</button>
+        <button class="rb" onclick="setZoom(100)">100%</button>
+        <button class="rb" onclick="setZoom(125)">125%</button>
+        <button class="rb" onclick="setZoom(150)">150%</button>
+      </div>
+      <span class="ribbon-group-label">Zoom</span>
+    </div>
+  </div>
+</div>
+
+<!-- QUICK ACCESS TOOLBAR -->
+<div id="qat">
+  <button class="qat-btn" onclick="newDocument()" data-tip="New">📄 New</button>
+  <button class="qat-btn" onclick="saveDocument()" data-tip="Save (Ctrl+S)">💾 Save</button>
+  <button class="qat-btn" onclick="exportPDF()" data-tip="Export PDF">📑 PDF</button>
+  <div class="qat-sep"></div>
+  <button class="qat-btn" onclick="document.execCommand('undo')">↩</button>
+  <button class="qat-btn" onclick="document.execCommand('redo')">↪</button>
+  <div class="qat-sep"></div>
+  <span id="wc-badge">Words: 0</span>
+</div>
+
+<!-- RULER -->
+<div id="ruler-container">
+  <canvas id="ruler-canvas" width="816" height="20"></canvas>
+</div>
+
+<!-- MAIN -->
+<div id="main">
+  <!-- SIDEBAR -->
+  <div id="sidebar">
+    <h3>Navigator</h3>
+    <div id="nav-list"></div>
+  </div>
+
+  <!-- EDITOR AREA -->
+  <div id="editor-area">
+    <div class="page" id="page-1">
+      <div id="editor" contenteditable="true" spellcheck="true">
+        <p>Start typing your document here...</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- STATUS BAR -->
+<div id="statusbar">
+  <span id="status-words">Words: 0</span>
+  <div class="status-sep"></div>
+  <span id="status-chars">Chars: 0</span>
+  <div class="status-sep"></div>
+  <span id="status-pages">Page 1</span>
+  <div class="status-sep"></div>
+  <span id="status-lang">🇺🇸 English</span>
+  <div id="zoom-area">
+    <span id="zoom-label">100%</span>
+    <input type="range" id="zoom-range" min="50" max="200" value="100" oninput="setZoom(this.value)" />
+  </div>
+</div>
+
+<!-- FIND & REPLACE BAR -->
+<div id="findbar">
+  <button class="find-close" onclick="closeFindBar()">✕</button>
+  <h4>Find &amp; Replace</h4>
+  <input type="text" id="find-input" placeholder="Find..." />
+  <input type="text" id="replace-input" placeholder="Replace with..." />
+  <div class="find-actions">
+    <button onclick="findText()">Find</button>
+    <button onclick="replaceText()">Replace</button>
+    <button onclick="replaceAll()">Replace All</button>
+  </div>
+</div>
+
+<!-- LINK MODAL -->
+<div class="modal-overlay" id="link-modal">
+  <div class="modal">
+    <div class="modal-header">Insert Hyperlink <button class="modal-close" onclick="closeModal('link-modal')">✕</button></div>
+    <div class="modal-body">
+      <div class="form-row"><label>Display Text</label><input id="link-text" type="text" placeholder="Link text..." /></div>
+      <div class="form-row"><label>URL</label><input id="link-url" type="text" placeholder="https://..." /></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-secondary" onclick="closeModal('link-modal')">Cancel</button>
+      <button class="btn-primary" onclick="insertLink()">Insert</button>
+    </div>
+  </div>
+</div>
+
+<!-- SYMBOL MODAL -->
+<div class="modal-overlay" id="symbol-modal">
+  <div class="modal">
+    <div class="modal-header">Insert Symbol <button class="modal-close" onclick="closeModal('symbol-modal')">✕</button></div>
+    <div class="modal-body">
+      <div style="display:flex;flex-wrap:wrap;gap:6px;">
+        <!-- Common symbols -->
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-secondary" onclick="closeModal('symbol-modal')">Close</button>
+    </div>
+  </div>
+</div>
+
+<!-- WORD COUNT MODAL -->
+<div class="modal-overlay" id="wordcount-modal">
+  <div class="modal">
+    <div class="modal-header">Word Count <button class="modal-close" onclick="closeModal('wordcount-modal')">✕</button></div>
+    <div class="modal-body" id="wordcount-body"></div>
+    <div class="modal-footer"><button class="btn-primary" onclick="closeModal('wordcount-modal')">Close</button></div>
+  </div>
+</div>
+
+<script>
+// ─────────────────────────────────────────────
+//  CORE EXEC
+// ─────────────────────────────────────────────
+const editor = document.getElementById('editor');
+
+function execCmd(cmd, val=null) {
+  editor.focus();
+  document.execCommand(cmd, false, val);
+  updateStatus();
+}
+
+// ─────────────────────────────────────────────
+//  TABS
+// ─────────────────────────────────────────────
+function switchTab(tab, btn) {
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+  btn.classList.add('active');
+  const panel = document.querySelector(`[data-tab="${tab}"]`);
+  if (panel) panel.classList.add('active');
+}
+
+// ─────────────────────────────────────────────
+//  FONT / SIZE
+// ─────────────────────────────────────────────
+function applyFont() {
+  const f = document.getElementById('font-family').value;
+  execCmd('fontName', f);
+}
+
+function applyFontSize() {
+  const size = parseInt(document.getElementById('font-size').value);
+  if (isNaN(size)) return;
+  // Use CSS via span
+  const sel = window.getSelection();
+  if (!sel.rangeCount || sel.isCollapsed) return;
+  const range = sel.getRangeAt(0);
+  const span = document.createElement('span');
+  span.style.fontSize = size + 'pt';
+  try { range.surroundContents(span); } catch(e) {}
+  updateStatus();
+}
+
+function changeFontSize(delta) {
+  const inp = document.getElementById('font-size');
+  inp.value = Math.max(6, Math.min(96, parseInt(inp.value||12) + delta));
+  applyFontSize();
+}
+
+function applyFontColor() {
+  const c = document.getElementById('font-color').value;
+  execCmd('foreColor', c);
+}
+
+function applyHighlight() {
+  const c = document.getElementById('highlight-color').value;
+  execCmd('hiliteColor', c);
+}
+
+// ─────────────────────────────────────────────
+//  STYLES
+// ─────────────────────────────────────────────
+function applyStyle(tag) {
+  execCmd('formatBlock', tag);
+}
+
+// ─────────────────────────────────────────────
+//  LINE SPACING
+// ─────────────────────────────────────────────
+function applyLineSpacing() {
+  const val = document.getElementById('line-spacing').value;
+  editor.style.lineHeight = val;
+  updateStatus();
+}
+
+// ─────────────────────────────────────────────
+//  UPDATE BUTTON STATES
+// ─────────────────────────────────────────────
+function updateBtns() {
+  const cmds = {
+    'btn-bold': 'bold',
+    'btn-italic': 'italic',
+    'btn-underline': 'underline',
+    'btn-left': 'justifyLeft',
+    'btn-center': 'justifyCenter',
+    'btn-right': 'justifyRight',
+    'btn-justify': 'justifyFull'
+  };
+  for (const [id, cmd] of Object.entries(cmds)) {
+    const el = document.getElementById(id);
+    if (el) el.classList.toggle('active', document.queryCommandState(cmd));
+  }
+}
+
+// ─────────────────────────────────────────────
+//  INSERT: TABLE
+// ─────────────────────────────────────────────
+let tablePickerOpen = false;
+function toggleTablePicker() {
+  const picker = document.getElementById('table-picker');
+  tablePickerOpen = !tablePickerOpen;
+  picker.classList.toggle('open', tablePickerOpen);
+  if (tablePickerOpen) buildTableGrid();
+}
+
+function buildTableGrid() {
+  const grid = document.getElementById('table-grid');
+  grid.innerHTML = '';
+  for (let r = 1; r <= 8; r++) {
+    for (let c = 1; c <= 10; c++) {
+      const cell = document.createElement('div');
+      cell.className = 'tg-cell';
+      cell.dataset.row = r;
+      cell.dataset.col = c;
+      cell.addEventListener('mouseover', () => highlightGrid(r, c));
+      cell.addEventListener('click', () => { insertTable(r, c); toggleTablePicker(); });
+      grid.appendChild(cell);
+    }
+  }
+}
+
+function highlightGrid(rows, cols) {
+  document.querySelectorAll('.tg-cell').forEach(c => {
+    const r = parseInt(c.dataset.row), cl = parseInt(c.dataset.col);
+    c.classList.toggle('highlight', r <= rows && cl <= cols);
+  });
+  document.getElementById('table-picker-label').textContent = `${rows} × ${cols}`;
+}
+
+function insertTable(rows, cols) {
+  let html = '<table>';
+  html += '<tr>' + Array(cols).fill('<th>Header</th>').join('') + '</tr>';
+  for (let r = 0; r < rows-1; r++) {
+    html += '<tr>' + Array(cols).fill('<td>Cell</td>').join('') + '</tr>';
+  }
+  html += '</table><p></p>';
+  execCmd('insertHTML', html);
+}
+
+// ─────────────────────────────────────────────
+//  INSERT: IMAGE
+// ─────────────────────────────────────────────
+function triggerImageUpload() { document.getElementById('img-upload').click(); }
+
+function insertImage(input) {
+  if (!input.files[0]) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    execCmd('insertHTML', `<img src="${e.target.result}" style="max-width:100%;border-radius:4px;"/>`);
+  };
+  reader.readAsDataURL(input.files[0]);
+  input.value = '';
+}
+
+// ─────────────────────────────────────────────
+//  INSERT: LINK
+// ─────────────────────────────────────────────
+let savedRange = null;
+function openLinkModal() {
+  const sel = window.getSelection();
+  if (sel.rangeCount) savedRange = sel.getRangeAt(0).cloneRange();
+  const selectedText = sel.toString();
+  document.getElementById('link-text').value = selectedText;
+  document.getElementById('link-url').value = 'https://';
+  openModal('link-modal');
+}
+
+function insertLink() {
+  const text = document.getElementById('link-text').value;
+  const url = document.getElementById('link-url').value;
+  if (!url) return;
+  editor.focus();
+  if (savedRange) {
+    const sel = window.getSelection();
+    sel.removeAllRanges();
+    sel.addRange(savedRange);
+  }
+  execCmd('insertHTML', `<a href="${url}" target="_blank">${text || url}</a>`);
+  closeModal('link-modal');
+}
+
+// ─────────────────────────────────────────────
+//  INSERT: HR, DATE, SPECIAL CHARS
+// ─────────────────────────────────────────────
+function insertHR() { execCmd('insertHTML', '<hr/>'); }
+
+function insertDateStamp() {
+  const now = new Date().toLocaleDateString('en-US', {weekday:'long',year:'numeric',month:'long',day:'numeric'});
+  execCmd('insertHTML', `<span>${now}</span>`);
+}
+
+function insertSpecialChar(ch) { execCmd('insertText', ch); }
+
+function insertPageBreak() {
+  execCmd('insertHTML', '<div style="page-break-after:always; border-top:2px dashed #aaa; margin:16px 0; text-align:center; color:#aaa; font-size:11px;">— Page Break —</div>');
+}
+
+// ─────────────────────────────────────────────
+//  INSERT: COMMENT
+// ─────────────────────────────────────────────
+function insertComment() {
+  const txt = prompt('Comment:');
+  if (txt) {
+    execCmd('insertHTML', `<span title="${txt}" style="background:#fff9c4; border-bottom:2px solid #f9a825; cursor:help;">[${txt}]</span>`);
+  }
+}
+
+// ─────────────────────────────────────────────
+//  LAYOUT
+// ─────────────────────────────────────────────
+function applyPageSize() {
+  const sizes = {
+    letter: {w: '816px', h: '1056px'},
+    a4:     {w: '794px', h: '1123px'},
+    legal:  {w: '816px', h: '1344px'},
+    a5:     {w: '559px', h: '794px'}
+  };
+  const size = document.getElementById('page-size').value;
+  const s = sizes[size];
+  document.querySelectorAll('.page').forEach(p => {
+    p.style.width = s.w;
+    p.style.minHeight = s.h;
+  });
+}
+
+function setOrientation(dir) {
+  const page = document.querySelector('.page');
+  const w = page.style.width || '816px';
+  const h = page.style.minHeight || '1056px';
+  if (dir === 'landscape') {
+    page.style.width = h; page.style.minHeight = w;
+  } else {
+    page.style.width = w; page.style.minHeight = h;
+  }
+}
+
+function setMargins(type) {
+  const m = {normal:'96px', narrow:'48px', wide:'144px'}[type];
+  document.querySelectorAll('.page').forEach(p => { p.style.padding = m; });
+}
+
+function setColumns(n) {
+  editor.style.columnCount = n > 1 ? n : '';
+  editor.style.columnGap = n > 1 ? '40px' : '';
+}
+
+function addSpacing(dir) {
+  const sel = window.getSelection();
+  if (!sel.rangeCount) return;
+  const node = sel.getRangeAt(0).startContainer;
+  const block = node.nodeType===1 ? node : node.parentElement;
+  if (dir==='before') block.style.marginTop = (parseInt(block.style.marginTop||0)+8)+'px';
+  else block.style.marginBottom = (parseInt(block.style.marginBottom||0)+8)+'px';
+}
+
+// ─────────────────────────────────────────────
+//  REVIEW
+// ─────────────────────────────────────────────
+function checkSpelling() {
+  editor.spellcheck = true;
+  editor.focus();
+  alert('Browser spell check is active. Red underlines indicate spelling errors — right-click on them for suggestions.');
+}
+
+function countWords() {
+  const text = editor.innerText.trim();
+  const words = text ? text.split(/\s+/).filter(Boolean).length : 0;
+  const chars = text.length;
+  const charNoSpace = text.replace(/\s/g, '').length;
+  const lines = text.split('\n').length;
+  const paras = editor.querySelectorAll('p, h1, h2, h3, li').length;
+  document.getElementById('wordcount-body').innerHTML = `
+    <table style="width:100%;border-collapse:collapse;font-size:13px;">
+      <tr style="border-bottom:1px solid #eee"><td style="padding:6px 4px;color:#555">Words</td><td style="padding:6px 4px;font-weight:600">${words.toLocaleString()}</td></tr>
+      <tr style="border-bottom:1px solid #eee"><td style="padding:6px 4px;color:#555">Characters</td><td style="padding:6px 4px;font-weight:600">${chars.toLocaleString()}</td></tr>
+      <tr style="border-bottom:1px solid #eee"><td style="padding:6px 4px;color:#555">Characters (no spaces)</td><td style="padding:6px 4px;font-weight:600">${charNoSpace.toLocaleString()}</td></tr>
+      <tr style="border-bottom:1px solid #eee"><td style="padding:6px 4px;color:#555">Lines</td><td style="padding:6px 4px;font-weight:600">${lines.toLocaleString()}</td></tr>
+      <tr><td style="padding:6px 4px;color:#555">Paragraphs</td><td style="padding:6px 4px;font-weight:600">${paras.toLocaleString()}</td></tr>
+    </table>
+  `;
+  openModal('wordcount-modal');
+}
+
+// ─────────────────────────────────────────────
+//  VIEW
+// ─────────────────────────────────────────────
+function toggleSidebar() {
+  const sb = document.getElementById('sidebar');
+  sb.classList.toggle('open');
+  if (sb.classList.contains('open')) buildNav();
+}
+
+function buildNav() {
+  const list = document.getElementById('nav-list');
+  list.innerHTML = '';
+  const headings = editor.querySelectorAll('h1, h2, h3');
+  if (!headings.length) { list.innerHTML = '<p style="font-size:11px;color:#888">No headings found.</p>'; return; }
+  headings.forEach(h => {
+    const item = document.createElement('div');
+    const indent = {H1:'0px',H2:'10px',H3:'20px'}[h.tagName]||'0px';
+    item.className = 'nav-item';
+    item.style.paddingLeft = `calc(6px + ${indent})`;
+    item.style.fontWeight = h.tagName==='H1'?'700':'400';
+    item.textContent = h.textContent;
+    item.onclick = () => h.scrollIntoView({behavior:'smooth',block:'start'});
+    list.appendChild(item);
+  });
+}
+
+let rulerVisible = true;
+function toggleRuler() {
+  const r = document.getElementById('ruler-container');
+  rulerVisible = !rulerVisible;
+  r.style.display = rulerVisible ? '' : 'none';
+}
+
+function toggleFullscreen() {
+  if (!document.fullscreenElement) {
+    document.documentElement.requestFullscreen().catch(()=>{});
+  } else {
+    document.exitFullscreen();
+  }
+}
+
+function setZoom(val) {
+  val = parseInt(val);
+  document.getElementById('zoom-range').value = val;
+  document.getElementById('zoom-label').textContent = val + '%';
+  document.getElementById('editor-area').style.zoom = val / 100;
+}
+
+// ─────────────────────────────────────────────
+//  HEADER / FOOTER
+// ─────────────────────────────────────────────
+function toggleHeaderFooter(type) {
+  const page = document.getElementById('page-1');
+  const id = `page-${type}`;
+  let el = document.getElementById(id);
+  if (el) { el.remove(); return; }
+  el = document.createElement('div');
+  el.id = id;
+  el.contentEditable = true;
+  el.style.cssText = `
+    position:absolute; ${type==='header'?'top:0':'bottom:0'}:0;
+    left:0; right:0;
+    height:86px; padding:8px 96px;
+    font-size:10pt; color:#666;
+    border-${type==='header'?'bottom':'top'}:1px solid #ddd;
+    outline:none; background:#fafafa;
+    display:flex; align-items:center;
+  `;
+  el.innerHTML = type==='header' ? '<i>Document Header</i>' : '<i>Document Footer</i>';
+  page.appendChild(el);
+}
+
+// ─────────────────────────────────────────────
+//  FIND & REPLACE
+// ─────────────────────────────────────────────
+function openFindBar() {
+  document.getElementById('findbar').classList.add('open');
+  document.getElementById('find-input').focus();
+}
+function closeFindBar() { document.getElementById('findbar').classList.remove('open'); }
+
+function findText() {
+  const term = document.getElementById('find-input').value;
+  if (!term) return;
+  window.find(term, false, false, true, false, true);
+}
+
+function replaceText() {
+  const find = document.getElementById('find-input').value;
+  const repl = document.getElementById('replace-input').value;
+  if (!find) return;
+  if (window.find(find, false, false, true, false, true)) {
+    const sel = window.getSelection();
+    if (sel.toString().toLowerCase() === find.toLowerCase()) {
+      execCmd('insertText', repl);
+    }
+  }
+}
+
+function replaceAll() {
+  const find = document.getElementById('find-input').value;
+  const repl = document.getElementById('replace-input').value;
+  if (!find) return;
+  const html = editor.innerHTML;
+  const regex = new RegExp(escapeRegex(find), 'gi');
+  editor.innerHTML = html.replace(regex, repl);
+  updateStatus();
+}
+
+function escapeRegex(s) { return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); }
+
+// ─────────────────────────────────────────────
+//  SYMBOL MODAL POPULATE
+// ─────────────────────────────────────────────
+function openSymbolModal() {
+  const symbols = ['©','®','™','°','±','×','÷','½','¼','¾','§','¶','†','‡','•','…','–','—','←','→','↑','↓','↔','↵','∞','≠','≤','≥','∑','√','∫','π','α','β','γ','δ','€','£','¥','¢','₹','μ','Ω','℃','℉','☑','✓','✗','★','☆','♥','♦','♠','♣','♪','♫'];
+  const container = document.querySelector('#symbol-modal .modal-body div');
+  container.innerHTML = '';
+  symbols.forEach(sym => {
+    const btn = document.createElement('button');
+    btn.textContent = sym;
+    btn.title = sym;
+    btn.style.cssText = 'width:34px;height:34px;font-size:16px;border:1px solid #ccc;border-radius:4px;cursor:pointer;background:#fff;transition:background 0.1s;';
+    btn.onmouseover = () => btn.style.background='#e8f0fe';
+    btn.onmouseout = () => btn.style.background='#fff';
+    btn.onclick = () => { insertSpecialChar(sym); closeModal('symbol-modal'); };
+    container.appendChild(btn);
+  });
+  openModal('symbol-modal');
+}
+
+// ─────────────────────────────────────────────
+//  FORMAT PAINTER
+// ─────────────────────────────────────────────
+let formatPainterActive = false, capturedStyle = null;
+function toggleFormatPainter() {
+  formatPainterActive = !formatPainterActive;
+  document.getElementById('format-painter-btn').classList.toggle('active', formatPainterActive);
+  if (formatPainterActive) {
+    const sel = window.getSelection();
+    if (sel.rangeCount && !sel.isCollapsed) {
+      const el = sel.getRangeAt(0).startContainer.parentElement;
+      capturedStyle = el.style.cssText;
+    }
+    editor.style.cursor = 'copy';
+  } else {
+    editor.style.cursor = '';
+  }
+}
+
+editor.addEventListener('mouseup', () => {
+  if (formatPainterActive && capturedStyle) {
+    const sel = window.getSelection();
+    if (sel.rangeCount && !sel.isCollapsed) {
+      const range = sel.getRangeAt(0);
+      const span = document.createElement('span');
+      span.style.cssText = capturedStyle;
+      try { range.surroundContents(span); } catch(e) {}
+    }
+    formatPainterActive = false;
+    capturedStyle = null;
+    document.getElementById('format-painter-btn').classList.remove('active');
+    editor.style.cursor = '';
+  }
+  updateBtns();
+  updateStatus();
+  updateFontDisplay();
+});
+
+// ─────────────────────────────────────────────
+//  UPDATE FONT DISPLAY ON SELECTION CHANGE
+// ─────────────────────────────────────────────
+function updateFontDisplay() {
+  try {
+    const font = document.queryCommandValue('fontName').replace(/['"]/g,'');
+    const size = document.queryCommandValue('fontSize');
+    if (font) {
+      const sel = document.getElementById('font-family');
+      for (let opt of sel.options) {
+        if (opt.value.toLowerCase() === font.toLowerCase()) { sel.value = opt.value; break; }
+      }
+    }
+  } catch(e) {}
+}
+
+// ─────────────────────────────────────────────
+//  STATUS BAR
+// ─────────────────────────────────────────────
+function updateStatus() {
+  const text = editor.innerText.trim();
+  const words = text ? text.split(/\s+/).filter(Boolean).length : 0;
+  const chars = text.length;
+  document.getElementById('status-words').textContent = `Words: ${words.toLocaleString()}`;
+  document.getElementById('status-chars').textContent = `Chars: ${chars.toLocaleString()}`;
+  document.getElementById('wc-badge').textContent = `Words: ${words.toLocaleString()}`;
+}
+
+editor.addEventListener('input', updateStatus);
+editor.addEventListener('keyup', updateBtns);
+
+// ─────────────────────────────────────────────
+//  KEYBOARD SHORTCUTS
+// ─────────────────────────────────────────────
+document.addEventListener('keydown', e => {
+  if (e.ctrlKey || e.metaKey) {
+    if (e.key === 's') { e.preventDefault(); saveDocument(); }
+    if (e.key === 'h') { e.preventDefault(); openFindBar(); }
+    if (e.key === 'p') { e.preventDefault(); window.print(); }
+  }
+  if (e.key === 'Tab' && document.activeElement === editor) {
+    e.preventDefault();
+    execCmd('insertHTML', '&emsp;&emsp;');
+  }
+});
+
+// ─────────────────────────────────────────────
+//  MODALS
+// ─────────────────────────────────────────────
+function openModal(id) { document.getElementById(id).classList.add('open'); }
+function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+document.querySelectorAll('.modal-overlay').forEach(m => {
+  m.addEventListener('click', e => { if (e.target === m) m.classList.remove('open'); });
+});
+
+// ─────────────────────────────────────────────
+//  DOCUMENT MANAGEMENT
+// ─────────────────────────────────────────────
+function newDocument() {
+  if (!confirm('Create new document? Unsaved changes will be lost.')) return;
+  editor.innerHTML = '<p>Start typing your new document...</p>';
+  document.getElementById('doc-title-input').value = 'Untitled Document';
+  updateStatus();
+}
+
+function saveDocument() {
+  const content = editor.innerHTML;
+  const title = document.getElementById('doc-title-input').value || 'document';
+  const blob = new Blob([`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>${title}</title><style>body{font-family:Calibri,serif;font-size:12pt;line-height:1.5;max-width:800px;margin:80px auto;padding:0 40px;}table{border-collapse:collapse;width:100%}td,th{border:1px solid #aaa;padding:5px 8px;}h1{font-size:26pt}h2{font-size:20pt;color:#2b579a}h3{font-size:15pt}a{color:#2b579a}blockquote{border-left:4px solid #2b579a;padding-left:16px;color:#555;font-style:italic}</style></head><body>${content}</body></html>`], {type:'text/html'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = title.replace(/\s+/g,'_') + '.html';
+  a.click();
+  URL.revokeObjectURL(a.href);
+}
+
+// ─────────────────────────────────────────────
+//  PDF EXPORT
+// ─────────────────────────────────────────────
+function exportPDF() {
+  const title = document.getElementById('doc-title-input').value || 'document';
+  const pageEl = document.getElementById('page-1');
+
+  // Temporarily remove dashed lines for clean PDF
+  pageEl.style.setProperty('--page-pseudo', 'none');
+
+  const opt = {
+    margin: [10, 10, 10, 10],
+    filename: title.replace(/\s+/g,'_') + '.pdf',
+    image: { type: 'jpeg', quality: 0.98 },
+    html2canvas: { scale: 2, useCORS: true, allowTaint: true },
+    jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+  };
+
+  // Clone the editor content for export
+  const clone = document.createElement('div');
+  clone.style.cssText = `
+    font-family: Calibri, serif;
+    font-size: 12pt;
+    line-height: 1.5;
+    padding: 40px 60px;
+    max-width: 794px;
+    background: #fff;
+    color: #000;
+  `;
+  clone.innerHTML = editor.innerHTML;
+
+  html2pdf().from(clone).set(opt).save();
+}
+
+// ─────────────────────────────────────────────
+//  RULER DRAWING
+// ─────────────────────────────────────────────
+function drawRuler() {
+  const canvas = document.getElementById('ruler-canvas');
+  const ctx = canvas.getContext('2d');
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  ctx.fillStyle = '#f3f3f3';
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+  // Margins shaded
+  ctx.fillStyle = '#e0e0e0';
+  ctx.fillRect(0, 0, 96, 20);
+  ctx.fillRect(720, 0, 96, 20);
+
+  // Tick marks
+  ctx.strokeStyle = '#888';
+  ctx.fillStyle = '#555';
+  ctx.font = '9px Arial';
+  ctx.textAlign = 'center';
+  for (let i = 0; i <= 720; i++) {
+    const x = 96 + i;
+    const inch = i / 96;
+    if (i % 96 === 0) {
+      ctx.beginPath(); ctx.moveTo(x, 8); ctx.lineTo(x, 20); ctx.stroke();
+      if (inch > 0) ctx.fillText(inch, x, 8);
+    } else if (i % 48 === 0) {
+      ctx.beginPath(); ctx.moveTo(x, 13); ctx.lineTo(x, 20); ctx.stroke();
+    } else if (i % 12 === 0) {
+      ctx.beginPath(); ctx.moveTo(x, 16); ctx.lineTo(x, 20); ctx.stroke();
+    }
+  }
+}
+drawRuler();
+
+// ─────────────────────────────────────────────
+//  TABLE PICKER OUTSIDE CLICK
+// ─────────────────────────────────────────────
+document.addEventListener('click', e => {
+  if (tablePickerOpen) {
+    const picker = document.getElementById('table-picker');
+    const btn = document.getElementById('table-btn');
+    if (!picker.contains(e.target) && e.target !== btn) {
+      picker.classList.remove('open');
+      tablePickerOpen = false;
+    }
+  }
+});
+
+// ─────────────────────────────────────────────
+//  INIT
+// ─────────────────────────────────────────────
+updateStatus();
+editor.focus();
+
+// Set initial selection to end
+const range = document.createRange();
+const sel = window.getSelection();
+range.selectNodeContents(editor);
+range.collapse(false);
+sel.removeAllRanges();
+sel.addRange(range);
+</script>
+</body>
+</html>
