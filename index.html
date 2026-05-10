@@ -1,0 +1,2279 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>WordCraft Pro — Document Editor</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=Dancing+Script:wght@400;700&family=Oswald:wght@400;700&family=Lato:ital,wght@0,400;0,700;1,400&family=Merriweather:ital,wght@0,400;0,700;1,400&family=Roboto+Mono:wght@400;700&family=Pacifico&family=Abril+Fatface&family=Raleway:wght@400;700&family=Nunito:wght@400;700&family=Lobster&family=Crimson+Text:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+<style>
+:root {
+  --blue:#2b579a; --blue-dark:#1e3f73; --blue-light:#d0e4ff;
+  --toolbar-bg:#f3f3f3; --border:#d0d0d0; --btn-hover:#dce6f7;
+  --btn-active:#b8cef5; --page-bg:#fff; --app-bg:#9a9a9a;
+  --shadow:0 4px 20px rgba(0,0,0,0.32); --radius:4px;
+  --accent:#217346; --warn:#d4380d; --sel:#c7d6f5;
+}
+.dark-mode {
+  --blue:#4a7fc4; --blue-dark:#2d5fa0; --blue-light:#1a3a6e;
+  --toolbar-bg:#2a2a2a; --border:#444; --btn-hover:#3a4a6a;
+  --btn-active:#4a5a8a; --page-bg:#1e1e1e; --app-bg:#111;
+  --shadow:0 4px 20px rgba(0,0,0,0.6);
+}
+.dark-mode #editor { color:#e8e8e8; caret-color:#e8e8e8; }
+.dark-mode #statusbar { background:#1a1a1a; }
+.dark-mode #titlebar { background:#1a2a4a; }
+.dark-mode #tab-strip { background:#1a2a4a; }
+.dark-mode .page { background:#252525; box-shadow:0 4px 20px rgba(0,0,0,.6); }
+.dark-mode select.rsel,.dark-mode input.rnum { background:#333; color:#ddd; border-color:#555; }
+.dark-mode .qb,.dark-mode .rb { color:#ccc; }
+.dark-mode #qat { background:#222; border-color:#444; }
+.dark-mode .modal { background:#2a2a2a; }
+.dark-mode .mbody,.dark-mode .mfoot,.dark-mode .fr input { background:#2a2a2a; color:#ddd; border-color:#555; }
+.dark-mode #findbar { background:#2a2a2a; border-color:#555; color:#ddd; }
+.dark-mode #findbar input { background:#333; color:#ddd; border-color:#555; }
+.dark-mode #context-menu { background:#2a2a2a; border-color:#555; }
+.dark-mode .ctx-item { color:#ccc; }
+.dark-mode .ctx-item:hover { background:#3a4a6a; }
+.dark-mode #sidebar { background:#222; border-color:#444; }
+.dark-mode .nav-item { color:#ccc; }
+.dark-mode .nav-item:hover { background:#333; }
+.dark-mode #minibar { background:#2a2a2a; border-color:#555; }
+.dark-mode .minibar-btn { color:#ccc; }
+
+*, *::before, *::after { box-sizing: border-box; margin:0; padding:0; }
+html, body { height:100%; width:100%; overflow:hidden; font-family:'Lato',Arial,sans-serif; font-size:13px; color:#1a1a1a; background:var(--app-bg); -webkit-tap-highlight-color:transparent; }
+
+/* ── TITLE BAR ── */
+#titlebar { background:var(--blue); color:#fff; display:flex; align-items:center; height:40px; padding:0 8px; gap:6px; flex-shrink:0; z-index:100; user-select:none; }
+.logo { font-weight:700; font-size:14px; display:flex; align-items:center; gap:5px; flex-shrink:0; }
+.logo-icon { width:24px; height:24px; background:rgba(255,255,255,.22); border-radius:4px; display:flex; align-items:center; justify-content:center; font-size:13px; font-weight:900; }
+#doc-title { flex:1; background:transparent; border:1px solid transparent; color:#fff; font-size:13px; padding:2px 6px; border-radius:3px; outline:none; min-width:0; font-family:'Lato',Arial,sans-serif; }
+#doc-title:focus { border-color:rgba(255,255,255,.7); background:rgba(255,255,255,.1); }
+.tbar-btn { background:rgba(255,255,255,.15); border:none; color:#fff; border-radius:3px; padding:4px 8px; font-size:11px; cursor:pointer; white-space:nowrap; flex-shrink:0; font-family:'Lato',Arial,sans-serif; transition:background .15s; touch-action:manipulation; }
+.tbar-btn:hover,.tbar-btn:active { background:rgba(255,255,255,.28); }
+#autosave-indicator { font-size:10px; color:rgba(255,255,255,.7); flex-shrink:0; min-width:70px; }
+
+/* ── TAB STRIP ── */
+#tab-strip { background:var(--blue); display:flex; overflow-x:auto; flex-shrink:0; scrollbar-width:none; }
+#tab-strip::-webkit-scrollbar { display:none; }
+.tab-btn { background:none; border:none; color:rgba(255,255,255,.78); padding:6px 14px; font-size:12px; font-weight:600; cursor:pointer; white-space:nowrap; border-bottom:2px solid transparent; font-family:'Lato',Arial,sans-serif; transition:color .15s; flex-shrink:0; touch-action:manipulation; }
+.tab-btn.active { color:var(--blue); background:var(--toolbar-bg); border-bottom-color:var(--toolbar-bg); }
+.tab-btn:hover:not(.active) { color:#fff; background:rgba(255,255,255,.1); }
+
+/* ── RIBBON ── */
+#ribbon { background:var(--toolbar-bg); border-bottom:1px solid var(--border); flex-shrink:0; }
+.tab-panel { display:none; }
+.tab-panel.active { display:flex; }
+.ribbon-scroll { display:flex; align-items:stretch; overflow-x:auto; overflow-y:hidden; padding:4px 5px; gap:0; scrollbar-width:none; min-height:65px; width:100%; }
+.ribbon-scroll::-webkit-scrollbar { display:none; }
+.rg { display:flex; flex-direction:column; align-items:center; padding:0 6px; border-right:1px solid var(--border); gap:2px; flex-shrink:0; }
+.rg:last-child { border-right:none; }
+.rg-label { font-size:9px; color:#888; margin-top:auto; padding-top:2px; text-transform:uppercase; letter-spacing:.3px; white-space:nowrap; }
+.rrow { display:flex; align-items:center; gap:2px; flex-wrap:nowrap; }
+.rb { display:flex; flex-direction:column; align-items:center; justify-content:center; background:none; border:1px solid transparent; border-radius:var(--radius); cursor:pointer; padding:2px 5px; min-width:30px; min-height:28px; color:#333; font-size:11px; font-family:'Lato',Arial,sans-serif; transition:all .1s; gap:1px; flex-shrink:0; touch-action:manipulation; white-space:nowrap; }
+.rb:hover { background:var(--btn-hover); border-color:#aac; }
+.rb:active,.rb.active { background:var(--btn-active); border-color:var(--blue); color:var(--blue); }
+.rb.big { min-height:46px; min-width:36px; font-size:10px; padding:3px 7px; }
+.rb svg { flex-shrink:0; }
+select.rsel { border:1px solid var(--border); background:#fff; border-radius:var(--radius); font-size:12px; padding:2px 3px; height:26px; cursor:pointer; font-family:'Lato',Arial,sans-serif; color:#333; outline:none; }
+select.rsel:focus { border-color:var(--blue); }
+input.rnum { border:1px solid var(--border); background:#fff; border-radius:var(--radius); font-size:12px; padding:2px 3px; height:26px; width:44px; text-align:center; outline:none; font-family:'Lato',Arial,sans-serif; }
+input.rnum:focus { border-color:var(--blue); }
+input[type="color"].cpick { width:28px; height:24px; border:1px solid var(--border); border-radius:var(--radius); padding:1px; cursor:pointer; background:none; flex-shrink:0; }
+
+/* ── QAT ── */
+#qat { background:#fff; border-bottom:1px solid var(--border); display:flex; align-items:center; padding:2px 8px; gap:3px; flex-shrink:0; }
+.qb { background:none; border:1px solid transparent; border-radius:3px; cursor:pointer; padding:2px 7px; font-size:12px; display:flex; align-items:center; gap:3px; color:#333; transition:all .1s; font-family:'Lato',Arial,sans-serif; flex-shrink:0; touch-action:manipulation; white-space:nowrap; }
+.qb:hover { background:#e1e1e1; border-color:#bbb; }
+.q-sep { width:1px; height:16px; background:#ccc; margin:0 2px; }
+#wc-badge { font-size:11px; color:#666; margin-left:4px; }
+#sel-badge { font-size:11px; color:var(--blue); margin-left:4px; display:none; }
+
+/* ── RULER ── */
+#ruler-wrap { background:#eee; border-bottom:1px solid #ccc; display:flex; justify-content:center; height:18px; flex-shrink:0; overflow:hidden; position:relative; }
+#ruler-canvas { cursor:pointer; }
+
+/* ── MINI TOOLBAR (selection popup) ── */
+#minibar { position:fixed; background:#fff; border:1px solid #ccc; border-radius:6px; box-shadow:0 4px 20px rgba(0,0,0,.2); padding:4px 6px; display:none; z-index:700; gap:2px; flex-wrap:nowrap; align-items:center; }
+#minibar.show { display:flex; }
+.minibar-btn { background:none; border:1px solid transparent; border-radius:3px; cursor:pointer; padding:3px 6px; font-size:12px; color:#333; transition:all .1s; touch-action:manipulation; }
+.minibar-btn:hover { background:var(--btn-hover); border-color:#aac; }
+.minibar-btn.active { background:var(--btn-active); color:var(--blue); }
+.mb-sep2 { width:1px; height:14px; background:#ccc; margin:0 2px; }
+
+/* ── CONTEXT MENU ── */
+#context-menu { position:fixed; background:#fff; border:1px solid #ccc; border-radius:6px; box-shadow:0 6px 24px rgba(0,0,0,.2); padding:4px 0; z-index:800; display:none; min-width:180px; }
+#context-menu.show { display:block; }
+.ctx-item { padding:6px 16px; font-size:12px; color:#333; cursor:pointer; display:flex; align-items:center; gap:8px; font-family:'Lato',Arial,sans-serif; }
+.ctx-item:hover { background:var(--btn-hover); }
+.ctx-item.disabled { color:#aaa; cursor:default; }
+.ctx-item.disabled:hover { background:none; }
+.ctx-sep { height:1px; background:#eee; margin:3px 0; }
+.ctx-item span.ctx-key { margin-left:auto; font-size:10px; color:#999; }
+
+/* ── MAIN ── */
+#main { display:flex; flex:1; overflow:hidden; }
+#sidebar { width:180px; background:#f0f0f0; border-right:1px solid #ccc; overflow-y:auto; padding:8px; flex-shrink:0; display:none; }
+#sidebar.open { display:block; }
+#sidebar h3 { font-size:10px; font-weight:700; color:#888; text-transform:uppercase; letter-spacing:.4px; margin-bottom:6px; }
+.nav-item { padding:4px 6px; border-radius:3px; cursor:pointer; font-size:12px; color:#333; margin-bottom:2px; transition:background .1s; }
+.nav-item:hover { background:#ddd; }
+.nav-item.active { background:var(--sel); color:var(--blue); }
+
+#comments-panel { width:220px; background:#fffde7; border-left:1px solid #ccc; display:none; overflow-y:auto; }
+#comments-panel.open { display:block; }
+#comments-panel h3 { font-size:10px; font-weight:700; color:#888; text-transform:uppercase; letter-spacing:.4px; padding:8px; border-bottom:1px solid #eee; }
+.comment-card { margin:8px; padding:8px; background:#fff; border-radius:5px; box-shadow:0 1px 4px rgba(0,0,0,.1); font-size:11px; }
+.comment-card .cc-author { font-weight:700; color:var(--blue); font-size:10px; }
+.comment-card .cc-text { margin-top:3px; color:#333; }
+.comment-card .cc-del { background:none; border:none; color:#999; font-size:12px; cursor:pointer; float:right; }
+#comments-panel .no-comments { text-align:center; color:#aaa; font-size:12px; padding:20px 8px; }
+
+#editor-area { flex:1; overflow-y:auto; overflow-x:auto; padding:20px 0 40px; display:flex; flex-direction:column; align-items:center; background:var(--app-bg); -webkit-overflow-scrolling:touch; position:relative; }
+#editor-area::-webkit-scrollbar { width:6px; }
+#editor-area::-webkit-scrollbar-thumb { background:#888; border-radius:3px; }
+#editor-area.focus-mode { background:#2c2c2c; }
+#editor-area.focus-mode .page { box-shadow:0 0 80px rgba(0,0,0,.8); }
+
+.page { background:var(--page-bg); width:816px; min-height:1056px; box-shadow:var(--shadow); position:relative; margin-bottom:20px; padding:96px; flex-shrink:0; }
+.page-number { position:absolute; bottom:36px; left:0; right:0; text-align:center; font-size:10pt; color:#888; pointer-events:none; }
+
+/* Watermark */
+.watermark { position:absolute; top:50%; left:50%; transform:translate(-50%,-50%) rotate(-35deg); font-size:72px; font-weight:900; color:rgba(180,180,180,0.18); pointer-events:none; white-space:nowrap; z-index:0; user-select:none; display:none; }
+.watermark.show { display:block; }
+
+#editor { outline:none; min-height:864px; font-family:'Lato',Arial,sans-serif; font-size:12pt; line-height:1.5; color:#000; caret-color:#000; word-break:break-word; position:relative; z-index:1; }
+#editor p { margin:0 0 8px; }
+#editor h1 { font-size:26pt; font-weight:700; margin-bottom:12px; }
+#editor h2 { font-size:19pt; font-weight:700; color:var(--blue); margin-bottom:10px; }
+#editor h3 { font-size:14pt; font-weight:700; margin-bottom:8px; }
+#editor h4 { font-size:12pt; font-weight:700; margin-bottom:6px; }
+#editor table { border-collapse:collapse; width:100%; margin:8px 0; }
+#editor td,#editor th { border:1px solid #aaa; padding:5px 8px; min-width:40px; }
+#editor th { background:var(--blue); color:#fff; }
+#editor a { color:var(--blue); text-decoration:underline; }
+#editor blockquote { border-left:4px solid var(--blue); padding-left:16px; color:#555; margin:8px 0; font-style:italic; }
+#editor hr { border:none; border-top:2px solid #ccc; margin:12px 0; }
+#editor img { max-width:100%; border-radius:3px; cursor:pointer; }
+#editor img.selected-img { outline:2px solid var(--blue); }
+#editor pre { background:#f5f5f5; border:1px solid #ddd; border-radius:4px; padding:10px 14px; font-family:'Roboto Mono',monospace; font-size:10pt; margin:8px 0; white-space:pre-wrap; }
+#editor .comment-mark { background:#fff9c4; border-bottom:2px solid #f9a825; cursor:help; }
+#editor .find-highlight { background:#fff176; border-radius:2px; }
+#editor .find-highlight.current { background:#ff9800; color:#fff; border-radius:2px; }
+#editor .footnote-ref { font-size:8pt; vertical-align:super; color:var(--blue); cursor:pointer; font-weight:700; }
+#editor .footnote-area { border-top:2px solid #ccc; margin-top:24px; padding-top:12px; font-size:10pt; color:#555; }
+#editor .track-insert { background:#d4edda; text-decoration:underline; text-decoration-color:#28a745; }
+#editor .track-delete { background:#f8d7da; text-decoration:line-through; text-decoration-color:#dc3545; color:#dc3545; }
+
+/* ── STATUS BAR ── */
+#statusbar { background:var(--blue); color:#fff; display:flex; align-items:center; height:20px; padding:0 8px; gap:10px; font-size:10px; flex-shrink:0; user-select:none; }
+.ssep { width:1px; height:12px; background:rgba(255,255,255,.3); }
+#zoom-wrap { margin-left:auto; display:flex; align-items:center; gap:4px; }
+#zoom-range { width:60px; cursor:pointer; }
+#lang-select { background:none; border:none; color:rgba(255,255,255,.9); font-size:10px; cursor:pointer; font-family:'Lato',Arial,sans-serif; }
+
+/* ── MOBILE BOTTOM BAR ── */
+#mobile-bar { display:none; background:var(--toolbar-bg); border-top:1px solid var(--border); height:50px; flex-shrink:0; overflow-x:auto; overflow-y:hidden; scrollbar-width:none; align-items:center; gap:0; padding:3px; z-index:100; }
+#mobile-bar::-webkit-scrollbar { display:none; }
+.mb-btn { display:flex; flex-direction:column; align-items:center; justify-content:center; background:none; border:1px solid transparent; border-radius:5px; min-width:42px; height:44px; flex-shrink:0; cursor:pointer; font-size:16px; color:#333; transition:all .1s; touch-action:manipulation; font-family:'Lato',Arial,sans-serif; }
+.mb-btn span { font-size:8px; color:#666; margin-top:1px; }
+.mb-btn:active,.mb-btn.active { background:var(--btn-active); border-color:var(--blue); color:var(--blue); }
+.mb-sep { width:1px; height:28px; background:var(--border); flex-shrink:0; margin:0 2px; }
+
+/* ── MOBILE FORMAT PANEL ── */
+#fmt-panel { display:none; position:fixed; bottom:0; left:0; right:0; background:#fff; border-radius:16px 16px 0 0; box-shadow:0 -6px 30px rgba(0,0,0,.22); z-index:500; max-height:60vh; overflow-y:auto; padding-bottom:env(safe-area-inset-bottom,10px); }
+#fmt-panel.open { display:block; }
+.fp-handle { display:flex; justify-content:center; padding:8px 0 4px; }
+.fp-handle::before { content:''; width:38px; height:4px; background:#ccc; border-radius:2px; }
+.fp-header { display:flex; justify-content:space-between; align-items:center; padding:0 14px 10px; border-bottom:1px solid #eee; }
+.fp-header h3 { font-size:15px; font-weight:700; color:#333; }
+.fp-close { background:none; border:none; font-size:20px; color:#999; cursor:pointer; }
+.fp-section { padding:12px 14px; border-bottom:1px solid #f0f0f0; }
+.fp-section h4 { font-size:10px; text-transform:uppercase; color:#999; letter-spacing:.5px; margin-bottom:8px; }
+.font-grid { display:flex; flex-direction:column; gap:2px; }
+.font-option { padding:9px 12px; border-radius:7px; cursor:pointer; font-size:15px; transition:background .1s; border:1px solid transparent; touch-action:manipulation; }
+.font-option:active { background:var(--btn-active); }
+.font-option.selected { background:#e8f0fe; border-color:var(--blue); }
+.color-palette { display:grid; grid-template-columns:repeat(10,1fr); gap:5px; }
+.cp-swatch { aspect-ratio:1; border-radius:4px; cursor:pointer; touch-action:manipulation; border:1px solid rgba(0,0,0,.14); transition:transform .1s; }
+.cp-swatch:active { transform:scale(1.3); }
+.size-stepper { display:flex; align-items:center; gap:12px; }
+.size-stepper button { width:42px; height:42px; border-radius:50%; border:1px solid var(--border); background:#f0f0f0; font-size:20px; cursor:pointer; display:flex; align-items:center; justify-content:center; touch-action:manipulation; }
+.size-stepper button:active { background:var(--btn-active); }
+#fp-size-display { font-size:24px; font-weight:700; min-width:48px; text-align:center; }
+
+/* ── MODALS ── */
+.overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,.5); z-index:999; justify-content:center; align-items:center; }
+.overlay.open { display:flex; }
+.modal { background:#fff; border-radius:8px; box-shadow:0 8px 40px rgba(0,0,0,.3); min-width:280px; max-width:90vw; max-height:82vh; overflow-y:auto; }
+.mhdr { background:var(--blue); color:#fff; padding:11px 14px; display:flex; justify-content:space-between; align-items:center; font-weight:700; font-size:14px; border-radius:8px 8px 0 0; }
+.mclose { background:none; border:none; color:#fff; font-size:17px; cursor:pointer; }
+.mbody { padding:12px 14px; }
+.mfoot { padding:8px 14px; display:flex; justify-content:flex-end; gap:7px; border-top:1px solid #eee; }
+.btn-p { background:var(--blue); color:#fff; border:none; border-radius:4px; padding:6px 18px; cursor:pointer; font-size:13px; font-family:'Lato',Arial,sans-serif; touch-action:manipulation; }
+.btn-p:hover { background:var(--blue-dark); }
+.btn-s { background:#f3f3f3; color:#333; border:1px solid #ccc; border-radius:4px; padding:6px 14px; cursor:pointer; font-size:13px; font-family:'Lato',Arial,sans-serif; touch-action:manipulation; }
+.btn-s:hover { background:#e5e5e5; }
+.btn-warn { background:var(--warn); color:#fff; border:none; border-radius:4px; padding:6px 14px; cursor:pointer; font-size:13px; font-family:'Lato',Arial,sans-serif; }
+.fr { margin-bottom:9px; display:flex; flex-direction:column; gap:3px; }
+.fr label { font-size:12px; font-weight:700; color:#555; }
+.fr input,.fr select,.fr textarea { border:1px solid #ccc; border-radius:4px; padding:7px 9px; font-size:13px; outline:none; font-family:'Lato',Arial,sans-serif; }
+.fr input:focus,.fr select:focus,.fr textarea:focus { border-color:var(--blue); }
+.fr textarea { resize:vertical; min-height:80px; }
+
+/* ── FIND BAR ── */
+#findbar { display:none; position:fixed; top:108px; right:10px; background:#fff; border:1px solid #ccc; border-radius:7px; box-shadow:0 4px 20px rgba(0,0,0,.15); padding:10px 12px; z-index:800; min-width:230px; }
+#findbar.open { display:block; }
+#findbar h4 { font-size:12px; font-weight:700; margin-bottom:6px; }
+#findbar input { width:100%; border:1px solid #ccc; border-radius:4px; padding:5px 9px; font-size:12px; margin-bottom:5px; outline:none; font-family:'Lato',Arial,sans-serif; }
+#findbar input:focus { border-color:var(--blue); }
+#find-count { font-size:10px; color:#888; margin-bottom:4px; }
+.fa { display:flex; gap:4px; flex-wrap:wrap; }
+.fa button { background:#f3f3f3; border:1px solid #ccc; border-radius:3px; padding:4px 9px; font-size:11px; cursor:pointer; font-family:'Lato',Arial,sans-serif; touch-action:manipulation; }
+.fa button:hover { background:#e0e0e0; }
+.fb-close { position:absolute; top:7px; right:7px; background:none; border:none; font-size:17px; color:#999; cursor:pointer; }
+.case-btn { display:flex; align-items:center; gap:4px; font-size:11px; color:#555; margin-bottom:4px; cursor:pointer; }
+.case-btn input { width:14px; height:14px; }
+
+/* ── TABLE PICKER ── */
+#tpicker { display:none; position:absolute; background:#fff; border:1px solid #ccc; border-radius:5px; box-shadow:0 4px 16px rgba(0,0,0,.15); padding:7px; z-index:900; }
+#tpicker.open { display:block; }
+#tgrid { display:grid; grid-template-columns:repeat(8,20px); gap:2px; }
+.tgc { width:20px; height:20px; border:1px solid #ccc; border-radius:2px; cursor:pointer; background:#fff; transition:background .08s; }
+.tgc.hl { background:var(--sel); border-color:var(--blue); }
+#tpicker p { font-size:11px; text-align:center; margin-top:4px; color:#666; }
+
+/* ── PARAGRAPH BORDER ── */
+.para-border { border:1px solid #aaa; padding:8px 12px; border-radius:3px; margin:4px 0; }
+.para-border.dashed { border-style:dashed; }
+.para-border.thick { border-width:3px; }
+
+/* ── FOOTNOTE ── */
+.footnote-num { vertical-align:super; font-size:8pt; color:var(--blue); font-weight:700; cursor:pointer; }
+
+/* ── TOOLTIP ── */
+@media (hover:hover) {
+  [data-tip] { position:relative; }
+  [data-tip]:hover::after { content:attr(data-tip); position:absolute; bottom:calc(100% + 5px); left:50%; transform:translateX(-50%); background:#333; color:#fff; font-size:10px; white-space:nowrap; padding:3px 6px; border-radius:3px; pointer-events:none; z-index:9999; }
+}
+
+/* ── THEME COVERS ── */
+.theme-classic #editor h2 { color:#2b579a; }
+.theme-modern #editor h1,.theme-modern #editor h2,.theme-modern #editor h3 { color:#217346; }
+.theme-elegant #editor h1,.theme-elegant #editor h2 { color:#7b2d8b; }
+.theme-bold #editor { font-family:'Oswald',sans-serif; }
+.theme-minimal #editor { font-family:'Lato',sans-serif; }
+
+/* ── READING MODE ── */
+#reading-overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,.85); z-index:2000; overflow-y:auto; padding:40px 20px; }
+#reading-overlay.open { display:block; }
+#reading-content { background:#fff; max-width:680px; margin:0 auto; padding:60px; border-radius:8px; font-size:14pt; line-height:1.8; font-family:Georgia,serif; }
+#reading-content h1 { font-size:28pt; } 
+#reading-content h2 { font-size:20pt; color:var(--blue); }
+#reading-close { position:fixed; top:20px; right:20px; background:#fff; border:none; border-radius:50%; width:36px; height:36px; font-size:18px; cursor:pointer; box-shadow:0 2px 10px rgba(0,0,0,.3); z-index:2001; display:none; }
+#reading-overlay.open ~ #reading-close { display:flex; align-items:center; justify-content:center; }
+
+/* ── RESPONSIVE MOBILE ── */
+@media (max-width:700px) {
+  #tab-strip,#ribbon,#ruler-wrap,#qat { display:none !important; }
+  #mobile-bar { display:flex !important; }
+  #statusbar { font-size:9px; gap:6px; height:18px; }
+  #zoom-wrap { display:none; }
+  #titlebar { height:44px; }
+  .tbar-btn { padding:4px 6px; font-size:10px; }
+  #editor-area { padding:0; }
+  .page { width:100vw !important; min-height:100vh !important; padding:52px 16px 80px !important; box-shadow:none; border-radius:0; margin-bottom:0; }
+  #editor { font-size:15px; line-height:1.65; min-height:unset; }
+  #comments-panel { display:none !important; }
+}
+@media print {
+  body * { visibility:hidden; }
+  .page,.page * { visibility:visible; }
+  #pg-header,#pg-footer,.page-number,.watermark { visibility:visible; }
+  .page { position:fixed; inset:0; box-shadow:none; padding:60px; margin:0; }
+}
+</style>
+</head>
+<body>
+
+<!-- TITLE BAR -->
+<div id="titlebar">
+  <div class="logo"><div class="logo-icon">W</div><span>WordCraft Pro</span></div>
+  <input id="doc-title" type="text" value="Untitled Document" spellcheck="false"/>
+  <span id="autosave-indicator">● Saved</span>
+  <button class="tbar-btn" onclick="exportPDF()">⬇ PDF</button>
+  <button class="tbar-btn" onclick="window.print()">🖨</button>
+  <button class="tbar-btn" onclick="toggleDarkMode()" id="dark-btn">🌙</button>
+</div>
+
+<!-- TAB STRIP -->
+<div id="tab-strip">
+  <button class="tab-btn active" onclick="switchTab('home',this)">Home</button>
+  <button class="tab-btn" onclick="switchTab('insert',this)">Insert</button>
+  <button class="tab-btn" onclick="switchTab('design',this)">Design</button>
+  <button class="tab-btn" onclick="switchTab('layout',this)">Layout</button>
+  <button class="tab-btn" onclick="switchTab('references',this)">References</button>
+  <button class="tab-btn" onclick="switchTab('review',this)">Review</button>
+  <button class="tab-btn" onclick="switchTab('view',this)">View</button>
+</div>
+
+<!-- RIBBON -->
+<div id="ribbon">
+
+  <!-- HOME -->
+  <div class="tab-panel active" data-tab="home"><div class="ribbon-scroll">
+    <div class="rg">
+      <div class="rrow">
+        <button class="rb big" onclick="execCmd('paste')" data-tip="Paste (Ctrl+V)">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="8" y="2" width="8" height="4" rx="1"/><rect x="5" y="4" width="14" height="16" rx="2"/><line x1="9" y1="10" x2="15" y2="10"/><line x1="9" y1="14" x2="15" y2="14"/></svg>
+          Paste
+        </button>
+      </div>
+      <div class="rrow">
+        <button class="rb" onclick="execCmd('cut')" data-tip="Cut (Ctrl+X)">✂ Cut</button>
+        <button class="rb" onclick="execCmd('copy')" data-tip="Copy (Ctrl+C)">📋 Copy</button>
+        <button class="rb" id="fp-btn" onclick="toggleFmtPainter()" data-tip="Format Painter">🖌 Paint</button>
+        <button class="rb" onclick="pastePlain()" data-tip="Paste as Plain Text">⊠ Plain</button>
+      </div>
+      <span class="rg-label">Clipboard</span>
+    </div>
+    <div class="rg">
+      <div class="rrow">
+        <select class="rsel" id="font-family" style="width:140px" onchange="applyFont()" data-tip="Font">
+          <optgroup label="Sans Serif">
+            <option value="Lato">Lato</option><option value="Arial">Arial</option>
+            <option value="Verdana">Verdana</option><option value="Trebuchet MS">Trebuchet MS</option>
+            <option value="Tahoma">Tahoma</option><option value="Raleway">Raleway</option>
+            <option value="Nunito">Nunito</option><option value="Oswald">Oswald</option>
+            <option value="Calibri">Calibri</option>
+          </optgroup>
+          <optgroup label="Serif">
+            <option value="Times New Roman">Times New Roman</option><option value="Georgia">Georgia</option>
+            <option value="Garamond">Garamond</option><option value="Palatino Linotype">Palatino Linotype</option>
+            <option value="Merriweather">Merriweather</option><option value="Playfair Display">Playfair Display</option>
+            <option value="Crimson Text">Crimson Text</option>
+          </optgroup>
+          <optgroup label="Monospace">
+            <option value="Courier New">Courier New</option><option value="Roboto Mono">Roboto Mono</option>
+            <option value="Consolas">Consolas</option>
+          </optgroup>
+          <optgroup label="Display">
+            <option value="Abril Fatface">Abril Fatface</option><option value="Pacifico">Pacifico</option>
+            <option value="Dancing Script">Dancing Script</option><option value="Lobster">Lobster</option>
+            <option value="Impact">Impact</option><option value="Comic Sans MS">Comic Sans MS</option>
+          </optgroup>
+        </select>
+        <input class="rnum" id="font-size" type="number" value="12" min="1" max="144" onchange="applyFontSize()"/>
+        <button class="rb" onclick="changeFontSize(2)" data-tip="Larger">A▲</button>
+        <button class="rb" onclick="changeFontSize(-2)" data-tip="Smaller">A▼</button>
+      </div>
+      <div class="rrow">
+        <button class="rb" id="b-bold" onclick="execCmd('bold');syncBtns()" data-tip="Bold (Ctrl+B)"><b style="font-size:13px">B</b></button>
+        <button class="rb" id="b-italic" onclick="execCmd('italic');syncBtns()" data-tip="Italic (Ctrl+I)"><i style="font-size:13px">I</i></button>
+        <button class="rb" id="b-under" onclick="execCmd('underline');syncBtns()" data-tip="Underline (Ctrl+U)"><u style="font-size:13px">U</u></button>
+        <button class="rb" id="b-strike" onclick="execCmd('strikeThrough');syncBtns()" data-tip="Strikethrough"><s>S</s></button>
+        <button class="rb" id="b-sub" onclick="execCmd('subscript');syncBtns()" data-tip="Subscript">X₂</button>
+        <button class="rb" id="b-sup" onclick="execCmd('superscript');syncBtns()" data-tip="Superscript">X²</button>
+        <button class="rb" onclick="execCmd('removeFormat')" data-tip="Clear Formatting">✕A</button>
+        <button class="rb" onclick="applyTextEffect('shadow')" data-tip="Text Shadow">S̈</button>
+        <label data-tip="Font Color" style="cursor:pointer;display:flex;align-items:center;gap:1px;font-size:11px;">A<input type="color" class="cpick" id="font-color" value="#000000" onchange="applyFontColor()"/></label>
+        <label data-tip="Highlight" style="cursor:pointer;display:flex;align-items:center;gap:1px;font-size:11px;">HL<input type="color" class="cpick" id="hl-color" value="#FFFF00" onchange="applyHL()"/></label>
+      </div>
+      <span class="rg-label">Font</span>
+    </div>
+    <div class="rg">
+      <div class="rrow">
+        <button class="rb" onclick="execCmd('insertUnorderedList')" data-tip="Bullets">•≡</button>
+        <button class="rb" onclick="execCmd('insertOrderedList')" data-tip="Numbered">1≡</button>
+        <button class="rb" onclick="execCmd('outdent')" data-tip="Outdent">⟸</button>
+        <button class="rb" onclick="execCmd('indent')" data-tip="Indent">⟹</button>
+        <button class="rb" onclick="applyParaBorder()" data-tip="Paragraph Border">▭</button>
+        <button class="rb" onclick="applyParaShading()" data-tip="Paragraph Shading">▪</button>
+      </div>
+      <div class="rrow">
+        <button class="rb" id="b-left" onclick="execCmd('justifyLeft');syncBtns()" data-tip="Align Left">◧</button>
+        <button class="rb" id="b-center" onclick="execCmd('justifyCenter');syncBtns()" data-tip="Center">◫</button>
+        <button class="rb" id="b-right" onclick="execCmd('justifyRight');syncBtns()" data-tip="Align Right">◨</button>
+        <button class="rb" id="b-justify" onclick="execCmd('justifyFull');syncBtns()" data-tip="Justify">☰</button>
+        <select class="rsel" id="lsp" style="width:52px" onchange="applyLSP()" data-tip="Line Spacing">
+          <option value="1">1.0</option><option value="1.15">1.15</option>
+          <option value="1.5" selected>1.5</option><option value="2">2.0</option>
+          <option value="2.5">2.5</option><option value="3">3.0</option>
+        </select>
+        <select class="rsel" id="para-spacing" style="width:54px" onchange="applyParaSpacing()" data-tip="Para Spacing">
+          <option value="0">0 pt</option><option value="6">6 pt</option>
+          <option value="8" selected>8 pt</option><option value="12">12 pt</option>
+          <option value="18">18 pt</option>
+        </select>
+      </div>
+      <span class="rg-label">Paragraph</span>
+    </div>
+    <div class="rg">
+      <div class="rrow">
+        <button class="rb" onclick="applyBlock('p')">¶ Normal</button>
+        <button class="rb" onclick="applyBlock('h1')"><b>H1</b></button>
+        <button class="rb" onclick="applyBlock('h2')"><b>H2</b></button>
+        <button class="rb" onclick="applyBlock('h3')"><b>H3</b></button>
+        <button class="rb" onclick="applyBlock('h4')"><b>H4</b></button>
+        <button class="rb" onclick="applyBlock('blockquote')">"Q"</button>
+        <button class="rb" onclick="applyBlock('pre')">⌨ Code</button>
+      </div>
+      <span class="rg-label">Styles</span>
+    </div>
+    <div class="rg">
+      <div class="rrow">
+        <button class="rb big" onclick="openFindBar()">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><line x1="16.5" y1="16.5" x2="22" y2="22"/></svg>
+          Find
+        </button>
+        <button class="rb big" onclick="openFindBar(true)">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><line x1="16.5" y1="16.5" x2="22" y2="22"/></svg>
+          Replace
+        </button>
+      </div>
+      <span class="rg-label">Editing</span>
+    </div>
+  </div></div>
+
+  <!-- INSERT -->
+  <div class="tab-panel" data-tab="insert"><div class="ribbon-scroll">
+    <div class="rg">
+      <div class="rrow">
+        <button class="rb big" onclick="insertPageBreak()">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="4" y="2" width="16" height="20" rx="2"/><line x1="4" y1="12" x2="20" y2="12" stroke-dasharray="3 2"/></svg>Break
+        </button>
+        <button class="rb big" onclick="insertColumnBreak()">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="8" height="18" rx="1"/><rect x="13" y="3" width="8" height="18" rx="1"/></svg>Col Brk
+        </button>
+      </div>
+      <span class="rg-label">Pages</span>
+    </div>
+    <div class="rg" style="position:relative">
+      <div class="rrow">
+        <button class="rb big" id="tbtn" onclick="toggleTPicker()">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="3" y1="15" x2="21" y2="15"/><line x1="9" y1="3" x2="9" y2="21"/><line x1="15" y1="3" x2="15" y2="21"/></svg>Table
+        </button>
+      </div>
+      <span class="rg-label">Table</span>
+      <div id="tpicker"><div id="tgrid"></div><p id="tlabel">0 × 0</p></div>
+    </div>
+    <div class="rg">
+      <div class="rrow">
+        <button class="rb big" onclick="document.getElementById('imgup').click()">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>Picture
+        </button><input type="file" id="imgup" accept="image/*" style="display:none" onchange="insertImg(this)"/>
+      </div>
+      <span class="rg-label">Image</span>
+    </div>
+    <div class="rg">
+      <div class="rrow">
+        <button class="rb big" onclick="openLinkModal()">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>Link
+        </button>
+      </div>
+      <span class="rg-label">Links</span>
+    </div>
+    <div class="rg">
+      <div class="rrow">
+        <button class="rb big" onclick="insertFootnote()">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><line x1="4" y1="20" x2="20" y2="20"/><line x1="12" y1="4" x2="12" y2="16"/><path d="M8 8l4-4 4 4"/><text x="14" y="10" font-size="6" fill="currentColor">1</text></svg>Footnote
+        </button>
+        <button class="rb big" onclick="insertTOC()">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><line x1="4" y1="6" x2="20" y2="6"/><line x1="4" y1="10" x2="16" y2="10"/><line x1="4" y1="14" x2="20" y2="14"/><line x1="4" y1="18" x2="14" y2="18"/></svg>TOC
+        </button>
+      </div>
+      <span class="rg-label">References</span>
+    </div>
+    <div class="rg">
+      <div class="rrow">
+        <button class="rb" onclick="insertHR()">── HR</button>
+        <button class="rb" onclick="insertSym('©')">©</button>
+        <button class="rb" onclick="insertSym('®')">®</button>
+        <button class="rb" onclick="insertSym('™')">™</button>
+        <button class="rb" onclick="insertSym('→')">→</button>
+        <button class="rb" onclick="insertSym('—')">—</button>
+        <button class="rb" onclick="insertDate()">📅</button>
+        <button class="rb" onclick="openSymModal()">Ω</button>
+      </div>
+      <div class="rrow">
+        <button class="rb" onclick="toggleHdrFtr('header')">▲ Header</button>
+        <button class="rb" onclick="toggleHdrFtr('footer')">▼ Footer</button>
+        <button class="rb" onclick="togglePageNumbers()">## Pages</button>
+        <button class="rb" onclick="insertComment()">💬 Comment</button>
+      </div>
+      <span class="rg-label">Text</span>
+    </div>
+    <div class="rg">
+      <div class="rrow">
+        <button class="rb big" onclick="insertTextBox()">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="6" width="18" height="12" rx="2"/><line x1="7" y1="10" x2="17" y2="10"/><line x1="7" y1="14" x2="13" y2="14"/></svg>Text Box
+        </button>
+        <button class="rb big" onclick="openCoverModal()">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="2" width="18" height="20" rx="2"/><line x1="7" y1="8" x2="17" y2="8"/><line x1="7" y1="12" x2="17" y2="12"/><line x1="7" y1="16" x2="12" y2="16"/></svg>Cover
+        </button>
+      </div>
+      <span class="rg-label">Objects</span>
+    </div>
+  </div></div>
+
+  <!-- DESIGN -->
+  <div class="tab-panel" data-tab="design"><div class="ribbon-scroll">
+    <div class="rg">
+      <div class="rrow">
+        <button class="rb" onclick="applyTheme('classic')" style="background:#e3f2fd">🏛 Classic</button>
+        <button class="rb" onclick="applyTheme('modern')" style="background:#e8f5e9">🌿 Modern</button>
+        <button class="rb" onclick="applyTheme('elegant')" style="background:#f3e5f5">💎 Elegant</button>
+        <button class="rb" onclick="applyTheme('bold')" style="background:#fbe9e7">⚡ Bold</button>
+        <button class="rb" onclick="applyTheme('minimal')" style="background:#f5f5f5">◻ Minimal</button>
+      </div>
+      <span class="rg-label">Themes</span>
+    </div>
+    <div class="rg">
+      <div class="rrow">
+        <label style="font-size:11px;display:flex;align-items:center;gap:3px;">Page Color<input type="color" class="cpick" id="page-color" value="#ffffff" onchange="applyPageColor()"/></label>
+        <button class="rb" onclick="openWatermarkModal()">💧 Watermark</button>
+        <button class="rb" onclick="applyPageBorder()">▢ Page Border</button>
+      </div>
+      <div class="rrow">
+        <label style="font-size:11px;display:flex;align-items:center;gap:3px;">Doc Font<select class="rsel" id="doc-font" style="width:110px" onchange="applyDocFont()">
+          <option value="">— default —</option>
+          <option value="Georgia,serif">Georgia</option>
+          <option value="Palatino Linotype,serif">Palatino</option>
+          <option value="Merriweather,serif">Merriweather</option>
+          <option value="Oswald,sans-serif">Oswald</option>
+          <option value="Raleway,sans-serif">Raleway</option>
+        </select></label>
+      </div>
+      <span class="rg-label">Page Background</span>
+    </div>
+    <div class="rg">
+      <div class="rrow">
+        <button class="rb" onclick="applyParaStyle('default')">Default</button>
+        <button class="rb" onclick="applyParaStyle('compact')" style="font-size:10px">Compact</button>
+        <button class="rb" onclick="applyParaStyle('spacious')" style="font-size:10px">Spacious</button>
+      </div>
+      <span class="rg-label">Paragraph Style</span>
+    </div>
+  </div></div>
+
+  <!-- LAYOUT -->
+  <div class="tab-panel" data-tab="layout"><div class="ribbon-scroll">
+    <div class="rg">
+      <div class="rrow">
+        <select class="rsel" id="pgsize" style="width:120px" onchange="applyPageSize()">
+          <option value="letter">Letter (8.5×11)</option>
+          <option value="a4">A4 (8.27×11.7)</option>
+          <option value="legal">Legal (8.5×14)</option>
+          <option value="a5">A5 (5.83×8.27)</option>
+          <option value="b5">B5 (6.93×9.84)</option>
+          <option value="tabloid">Tabloid (11×17)</option>
+        </select>
+      </div>
+      <div class="rrow">
+        <button class="rb" onclick="setOrient('portrait')">▯ Portrait</button>
+        <button class="rb" onclick="setOrient('landscape')">▭ Landscape</button>
+      </div>
+      <span class="rg-label">Page Setup</span>
+    </div>
+    <div class="rg">
+      <div class="rrow">
+        <button class="rb" onclick="setMargins('normal')">Normal</button>
+        <button class="rb" onclick="setMargins('narrow')">Narrow</button>
+        <button class="rb" onclick="setMargins('wide')">Wide</button>
+        <button class="rb" onclick="setMargins('mirrored')">Mirrored</button>
+        <button class="rb" onclick="openMarginModal()">Custom…</button>
+      </div>
+      <span class="rg-label">Margins</span>
+    </div>
+    <div class="rg">
+      <div class="rrow">
+        <button class="rb" onclick="setCols(1)">│ One</button>
+        <button class="rb" onclick="setCols(2)">║ Two</button>
+        <button class="rb" onclick="setCols(3)">||| Three</button>
+      </div>
+      <span class="rg-label">Columns</span>
+    </div>
+    <div class="rg">
+      <div class="rrow">
+        <select class="rsel" id="indent-left" style="width:70px" onchange="applyIndent()" data-tip="Left Indent">
+          <option value="0">Left 0</option><option value="0.5in">0.5"</option>
+          <option value="1in">1"</option><option value="1.5in">1.5"</option><option value="2in">2"</option>
+        </select>
+        <select class="rsel" id="indent-right" style="width:72px" onchange="applyIndent()" data-tip="Right Indent">
+          <option value="0">Right 0</option><option value="0.5in">0.5"</option>
+          <option value="1in">1"</option><option value="1.5in">1.5"</option><option value="2in">2"</option>
+        </select>
+      </div>
+      <span class="rg-label">Indent</span>
+    </div>
+    <div class="rg">
+      <div class="rrow">
+        <select class="rsel" id="space-before" style="width:72px" onchange="applySpacing()">
+          <option value="0">Before 0</option><option value="6pt">6 pt</option>
+          <option value="12pt">12 pt</option><option value="18pt">18 pt</option>
+        </select>
+        <select class="rsel" id="space-after" style="width:72px" onchange="applySpacing()">
+          <option value="0">After 0</option><option value="6pt">6 pt</option>
+          <option value="8pt" selected>8 pt</option><option value="12pt">12 pt</option>
+        </select>
+      </div>
+      <span class="rg-label">Spacing</span>
+    </div>
+  </div></div>
+
+  <!-- REFERENCES -->
+  <div class="tab-panel" data-tab="references"><div class="ribbon-scroll">
+    <div class="rg">
+      <div class="rrow">
+        <button class="rb big" onclick="insertTOC()">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><line x1="4" y1="6" x2="20" y2="6"/><line x1="4" y1="10" x2="16" y2="10"/><line x1="4" y1="14" x2="20" y2="14"/><line x1="4" y1="18" x2="12" y2="18"/></svg>
+          Table of Contents
+        </button>
+        <button class="rb big" onclick="updateTOC()">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M21 2v6h-6"/><path d="M3 12A9 9 0 0 1 15 4.5l6 5.5"/><path d="M3 22v-6h6"/><path d="M21 12a9 9 0 0 1-12 7.5L3 14"/></svg>
+          Update TOC
+        </button>
+      </div>
+      <span class="rg-label">Table of Contents</span>
+    </div>
+    <div class="rg">
+      <div class="rrow">
+        <button class="rb big" onclick="insertFootnote()">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><line x1="4" y1="20" x2="20" y2="20"/><line x1="12" y1="4" x2="12" y2="16"/></svg>
+          Add Footnote
+        </button>
+        <button class="rb big" onclick="insertEndnote()">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><line x1="4" y1="4" x2="20" y2="4"/><line x1="12" y1="8" x2="12" y2="20"/></svg>
+          Add Endnote
+        </button>
+      </div>
+      <span class="rg-label">Footnotes</span>
+    </div>
+    <div class="rg">
+      <div class="rrow">
+        <button class="rb big" onclick="openCitationModal()">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M6 3H3v6l3 3M18 3h3v6l-3 3"/><path d="M3 9h6M15 9h6"/></svg>
+          Citation
+        </button>
+        <button class="rb big" onclick="insertBibliography()">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="7" y1="8" x2="17" y2="8"/><line x1="7" y1="12" x2="15" y2="12"/><line x1="7" y1="16" x2="13" y2="16"/></svg>
+          Bibliography
+        </button>
+      </div>
+      <span class="rg-label">Citations</span>
+    </div>
+  </div></div>
+
+  <!-- REVIEW -->
+  <div class="tab-panel" data-tab="review"><div class="ribbon-scroll">
+    <div class="rg">
+      <div class="rrow">
+        <button class="rb big" onclick="doSpell()">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 20h16"/><path d="M6 16L12 4l6 12"/><path d="M8.5 12h7"/></svg>Spelling
+        </button>
+        <button class="rb big" onclick="doWordCount()">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><line x1="4" y1="6" x2="20" y2="6"/><line x1="4" y1="10" x2="20" y2="10"/><line x1="4" y1="14" x2="14" y2="14"/></svg>Word Count
+        </button>
+      </div>
+      <span class="rg-label">Proofing</span>
+    </div>
+    <div class="rg">
+      <div class="rrow">
+        <button class="rb big" onclick="insertComment()">💬<br>Comment</button>
+        <button class="rb big" onclick="toggleCommentsPanel()">👁<br>Comments</button>
+        <button class="rb big" onclick="toggleTrackChanges()" id="track-btn">📝<br>Track</button>
+      </div>
+      <span class="rg-label">Comments</span>
+    </div>
+    <div class="rg">
+      <div class="rrow">
+        <button class="rb" onclick="document.execCommand('undo')">↩ Undo</button>
+        <button class="rb" onclick="document.execCommand('redo')">↪ Redo</button>
+      </div>
+      <span class="rg-label">History</span>
+    </div>
+    <div class="rg">
+      <div class="rrow">
+        <button class="rb big" onclick="startDictation()" id="dictate-btn">🎤<br>Dictate</button>
+        <button class="rb big" onclick="doTranslate()">🌐<br>Translate</button>
+      </div>
+      <span class="rg-label">Voice</span>
+    </div>
+  </div></div>
+
+  <!-- VIEW -->
+  <div class="tab-panel" data-tab="view"><div class="ribbon-scroll">
+    <div class="rg">
+      <div class="rrow">
+        <button class="rb" onclick="switchView('print')">🖨 Print</button>
+        <button class="rb" onclick="switchView('web')">🌐 Web</button>
+        <button class="rb" onclick="openReadingMode()">📖 Reading</button>
+        <button class="rb" onclick="toggleFocusMode()">🔲 Focus</button>
+      </div>
+      <span class="rg-label">Document Views</span>
+    </div>
+    <div class="rg">
+      <div class="rrow">
+        <button class="rb" onclick="toggleSidebar()">☰ Nav</button>
+        <button class="rb" onclick="toggleRuler()">📏 Ruler</button>
+        <button class="rb" onclick="toggleCommentsPanel()">💬 Comments</button>
+        <button class="rb" id="gridlines-btn" onclick="toggleGridlines()">⊞ Gridlines</button>
+      </div>
+      <span class="rg-label">Show</span>
+    </div>
+    <div class="rg">
+      <div class="rrow">
+        <button class="rb" onclick="setZoom(50)">50%</button>
+        <button class="rb" onclick="setZoom(75)">75%</button>
+        <button class="rb" onclick="setZoom(100)">100%</button>
+        <button class="rb" onclick="setZoom(125)">125%</button>
+        <button class="rb" onclick="setZoom(150)">150%</button>
+        <button class="rb" onclick="fitPage()">⛶ Fit</button>
+      </div>
+      <span class="rg-label">Zoom</span>
+    </div>
+    <div class="rg">
+      <div class="rrow">
+        <button class="rb" onclick="toggleDarkMode()">🌙 Dark</button>
+        <button class="rb" onclick="toggleTypewriterMode()" id="typewriter-btn">⌨ Typewriter</button>
+        <button class="rb" onclick="toggleFullscreen()">⛶ Fullscreen</button>
+      </div>
+      <span class="rg-label">Display</span>
+    </div>
+  </div></div>
+
+</div><!-- /ribbon -->
+
+<!-- QAT -->
+<div id="qat">
+  <button class="qb" onclick="newDoc()">📄 New</button>
+  <button class="qb" onclick="saveDoc()">💾 Save</button>
+  <button class="qb" onclick="exportPDF()">📑 PDF</button>
+  <div class="q-sep"></div>
+  <button class="qb" onclick="document.execCommand('undo')">↩ Undo</button>
+  <button class="qb" onclick="document.execCommand('redo')">↪ Redo</button>
+  <div class="q-sep"></div>
+  <span id="wc-badge">Words: 0</span>
+  <span id="sel-badge"></span>
+</div>
+
+<!-- RULER -->
+<div id="ruler-wrap"><canvas id="ruler-canvas" width="816" height="18"></canvas></div>
+
+<!-- MAIN -->
+<div id="main">
+  <div id="sidebar">
+    <h3>Navigator</h3>
+    <div id="nav-list"></div>
+  </div>
+  <div id="editor-area">
+    <div class="page" id="page-1">
+      <div class="watermark" id="watermark-el"></div>
+      <div class="page-number" id="page-num-display" style="display:none">1</div>
+      <div id="editor" contenteditable="true" spellcheck="true"><p>Start typing your document here…</p></div>
+    </div>
+  </div>
+  <div id="comments-panel">
+    <h3>💬 Comments</h3>
+    <div id="comments-list"><div class="no-comments">No comments yet.<br>Select text and click<br>"Insert Comment".</div></div>
+  </div>
+</div>
+
+<!-- STATUS BAR -->
+<div id="statusbar">
+  <span id="st-words">Words: 0</span>
+  <div class="ssep"></div>
+  <span id="st-chars">Chars: 0</span>
+  <div class="ssep"></div>
+  <span id="st-page">Page 1</span>
+  <div class="ssep"></div>
+  <span id="st-track" style="display:none;color:#ffeb3b">Track Changes ON</span>
+  <div class="ssep" id="track-sep" style="display:none"></div>
+  <select id="lang-select" onchange="setLanguage(this.value)">
+    <option value="en-US">🇺🇸 English (US)</option>
+    <option value="en-GB">🇬🇧 English (UK)</option>
+    <option value="es">🇪🇸 Spanish</option>
+    <option value="fr">🇫🇷 French</option>
+    <option value="de">🇩🇪 German</option>
+    <option value="bn">🇧🇩 Bangla</option>
+  </select>
+  <div id="zoom-wrap">
+    <span id="zoom-lbl">100%</span>
+    <input type="range" id="zoom-range" min="25" max="300" value="100" oninput="setZoom(this.value)"/>
+  </div>
+</div>
+
+<!-- MOBILE BOTTOM BAR -->
+<div id="mobile-bar">
+  <button class="mb-btn" onclick="document.execCommand('undo')">↩<span>Undo</span></button>
+  <button class="mb-btn" onclick="document.execCommand('redo')">↪<span>Redo</span></button>
+  <div class="mb-sep"></div>
+  <button class="mb-btn" id="mb-bold" onclick="execCmd('bold');syncBtns()"><b>B</b><span>Bold</span></button>
+  <button class="mb-btn" id="mb-italic" onclick="execCmd('italic');syncBtns()"><i>I</i><span>Italic</span></button>
+  <button class="mb-btn" id="mb-under" onclick="execCmd('underline');syncBtns()"><u>U</u><span>Under</span></button>
+  <div class="mb-sep"></div>
+  <button class="mb-btn" onclick="execCmd('justifyLeft')">◧<span>Left</span></button>
+  <button class="mb-btn" onclick="execCmd('justifyCenter')">◫<span>Center</span></button>
+  <button class="mb-btn" onclick="execCmd('justifyRight')">◨<span>Right</span></button>
+  <div class="mb-sep"></div>
+  <button class="mb-btn" onclick="execCmd('insertUnorderedList')">•≡<span>List</span></button>
+  <button class="mb-btn" onclick="execCmd('insertOrderedList')">1≡<span>Num</span></button>
+  <div class="mb-sep"></div>
+  <button class="mb-btn" onclick="openFP('font')">𝐴𝑎<span>Font</span></button>
+  <button class="mb-btn" onclick="openFP('size')">A⁺<span>Size</span></button>
+  <button class="mb-btn" onclick="openFP('color')">🎨<span>Color</span></button>
+  <div class="mb-sep"></div>
+  <button class="mb-btn" onclick="openFP('styles')">¶<span>Style</span></button>
+  <button class="mb-btn" onclick="document.getElementById('imgup').click()">🖼<span>Image</span></button>
+  <button class="mb-btn" onclick="openFP('table')">⊞<span>Table</span></button>
+  <button class="mb-btn" onclick="openFindBar()">🔍<span>Find</span></button>
+  <div class="mb-sep"></div>
+  <button class="mb-btn" onclick="saveDoc()">💾<span>Save</span></button>
+  <button class="mb-btn" onclick="exportPDF()">⬇<span>PDF</span></button>
+</div>
+
+<!-- MOBILE FORMAT PANEL -->
+<div id="fmt-panel">
+  <div class="fp-handle"></div>
+  <div class="fp-header"><h3 id="fp-title">Format</h3><button class="fp-close" onclick="closeFP()">✕</button></div>
+  <div id="fp-body"></div>
+</div>
+<div id="fp-overlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.38);z-index:499" onclick="closeFP()"></div>
+
+<!-- MINI TOOLBAR -->
+<div id="minibar">
+  <button class="minibar-btn" id="mb2-bold" onclick="execCmd('bold');syncMini()" title="Bold"><b>B</b></button>
+  <button class="minibar-btn" id="mb2-italic" onclick="execCmd('italic');syncMini()" title="Italic"><i>I</i></button>
+  <button class="minibar-btn" id="mb2-under" onclick="execCmd('underline');syncMini()" title="Underline"><u>U</u></button>
+  <button class="minibar-btn" id="mb2-strike" onclick="execCmd('strikeThrough');syncMini()" title="Strikethrough"><s>S</s></button>
+  <div class="mb-sep2"></div>
+  <button class="minibar-btn" onclick="execCmd('justifyLeft')" title="Left">◧</button>
+  <button class="minibar-btn" onclick="execCmd('justifyCenter')" title="Center">◫</button>
+  <button class="minibar-btn" onclick="execCmd('justifyRight')" title="Right">◨</button>
+  <div class="mb-sep2"></div>
+  <button class="minibar-btn" onclick="insertComment()" title="Comment">💬</button>
+  <button class="minibar-btn" onclick="execCmd('copy')" title="Copy">📋</button>
+  <button class="minibar-btn" onclick="execCmd('removeFormat')" title="Clear">✕</button>
+</div>
+
+<!-- CONTEXT MENU -->
+<div id="context-menu">
+  <div class="ctx-item" onclick="execCmd('cut')">✂ Cut<span class="ctx-key">Ctrl+X</span></div>
+  <div class="ctx-item" onclick="execCmd('copy')">📋 Copy<span class="ctx-key">Ctrl+C</span></div>
+  <div class="ctx-item" onclick="execCmd('paste')">📌 Paste<span class="ctx-key">Ctrl+V</span></div>
+  <div class="ctx-item" onclick="pastePlain()">⊠ Paste as Plain Text</div>
+  <div class="ctx-sep"></div>
+  <div class="ctx-item" onclick="execCmd('bold')"><b>B</b> Bold<span class="ctx-key">Ctrl+B</span></div>
+  <div class="ctx-item" onclick="execCmd('italic')"><i>I</i> Italic<span class="ctx-key">Ctrl+I</span></div>
+  <div class="ctx-item" onclick="execCmd('underline')"><u>U</u> Underline<span class="ctx-key">Ctrl+U</span></div>
+  <div class="ctx-sep"></div>
+  <div class="ctx-item" id="ctx-link" onclick="openLinkModal()">🔗 Hyperlink…</div>
+  <div class="ctx-item" onclick="insertComment()">💬 Insert Comment</div>
+  <div class="ctx-item" onclick="execCmd('removeFormat')">✕ Clear Formatting</div>
+  <div class="ctx-sep"></div>
+  <div class="ctx-item" onclick="doSelectAll()">☰ Select All<span class="ctx-key">Ctrl+A</span></div>
+  <div class="ctx-sep" id="ctx-table-sep" style="display:none"></div>
+  <div class="ctx-item" id="ctx-addrow" style="display:none" onclick="tableAddRow()">+ Add Row Below</div>
+  <div class="ctx-item" id="ctx-addcol" style="display:none" onclick="tableAddCol()">+ Add Column Right</div>
+  <div class="ctx-item" id="ctx-delrow" style="display:none" onclick="tableDelRow()">− Delete Row</div>
+  <div class="ctx-item" id="ctx-delcol" style="display:none" onclick="tableDelCol()">− Delete Column</div>
+  <div class="ctx-item" id="ctx-deltable" style="display:none" onclick="tableDelete()">🗑 Delete Table</div>
+  <div class="ctx-item" id="ctx-mergerow" style="display:none" onclick="tableMergeCells()">⊞ Merge Selected Cells</div>
+</div>
+
+<!-- FIND BAR -->
+<div id="findbar">
+  <button class="fb-close" onclick="closeFindBar()">✕</button>
+  <h4>Find &amp; Replace</h4>
+  <input type="text" id="find-inp" placeholder="Find…" oninput="liveFind()"/>
+  <input type="text" id="repl-inp" placeholder="Replace with…"/>
+  <div id="find-count"></div>
+  <label class="case-btn"><input type="checkbox" id="find-case"/> Match Case</label>
+  <label class="case-btn"><input type="checkbox" id="find-whole"/> Whole Word</label>
+  <div class="fa">
+    <button onclick="findNext()">↓ Next</button>
+    <button onclick="findPrev()">↑ Prev</button>
+    <button onclick="doReplace()">Replace</button>
+    <button onclick="doReplaceAll()">Replace All</button>
+  </div>
+</div>
+
+<!-- LINK MODAL -->
+<div class="overlay" id="link-modal">
+  <div class="modal">
+    <div class="mhdr">Insert Link <button class="mclose" onclick="closeModal('link-modal')">✕</button></div>
+    <div class="mbody">
+      <div class="fr"><label>Display Text</label><input id="lnk-txt" type="text" placeholder="Link text…"/></div>
+      <div class="fr"><label>URL</label><input id="lnk-url" type="url" placeholder="https://…"/></div>
+      <div class="fr"><label>Open in</label><select id="lnk-target" style="border:1px solid #ccc;border-radius:4px;padding:6px;font-size:13px;"><option value="_blank">New Tab</option><option value="_self">Same Window</option></select></div>
+    </div>
+    <div class="mfoot"><button class="btn-s" onclick="closeModal('link-modal')">Cancel</button><button class="btn-p" onclick="insertLink()">Insert</button></div>
+  </div>
+</div>
+
+<!-- SYMBOL MODAL -->
+<div class="overlay" id="sym-modal">
+  <div class="modal">
+    <div class="mhdr">Symbols <button class="mclose" onclick="closeModal('sym-modal')">✕</button></div>
+    <div class="mbody">
+      <input type="text" id="sym-search" placeholder="Search symbols…" oninput="filterSyms()" style="border:1px solid #ccc;border-radius:4px;padding:6px;font-size:13px;width:100%;margin-bottom:8px;outline:none;"/>
+      <div id="sym-grid" style="display:flex;flex-wrap:wrap;gap:5px;max-height:280px;overflow-y:auto;"></div>
+    </div>
+    <div class="mfoot"><button class="btn-p" onclick="closeModal('sym-modal')">Close</button></div>
+  </div>
+</div>
+
+<!-- WORD COUNT MODAL -->
+<div class="overlay" id="wc-modal">
+  <div class="modal">
+    <div class="mhdr">Statistics <button class="mclose" onclick="closeModal('wc-modal')">✕</button></div>
+    <div class="mbody" id="wc-body"></div>
+    <div class="mfoot"><button class="btn-p" onclick="closeModal('wc-modal')">Close</button></div>
+  </div>
+</div>
+
+<!-- WATERMARK MODAL -->
+<div class="overlay" id="watermark-modal">
+  <div class="modal">
+    <div class="mhdr">Watermark <button class="mclose" onclick="closeModal('watermark-modal')">✕</button></div>
+    <div class="mbody">
+      <div class="fr"><label>Text</label><input id="wm-text" type="text" placeholder="DRAFT, CONFIDENTIAL, etc." value="DRAFT"/></div>
+      <div class="fr"><label>Color</label><input type="color" id="wm-color" value="#c8c8c8" style="border:1px solid #ccc;border-radius:4px;padding:4px;height:36px;width:60px;cursor:pointer;"/></div>
+      <div class="fr"><label>Opacity (0–1)</label><input type="range" id="wm-opacity" min="0.05" max="0.5" step="0.05" value="0.15" style="width:100%;"/></div>
+    </div>
+    <div class="mfoot">
+      <button class="btn-s" onclick="removeWatermark()">Remove</button>
+      <button class="btn-s" onclick="closeModal('watermark-modal')">Cancel</button>
+      <button class="btn-p" onclick="applyWatermark()">Apply</button>
+    </div>
+  </div>
+</div>
+
+<!-- MARGIN MODAL -->
+<div class="overlay" id="margin-modal">
+  <div class="modal">
+    <div class="mhdr">Custom Margins <button class="mclose" onclick="closeModal('margin-modal')">✕</button></div>
+    <div class="mbody">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+        <div class="fr"><label>Top (px)</label><input id="mg-top" type="number" value="96" min="0" max="300"/></div>
+        <div class="fr"><label>Bottom (px)</label><input id="mg-bot" type="number" value="96" min="0" max="300"/></div>
+        <div class="fr"><label>Left (px)</label><input id="mg-left" type="number" value="96" min="0" max="300"/></div>
+        <div class="fr"><label>Right (px)</label><input id="mg-right" type="number" value="96" min="0" max="300"/></div>
+      </div>
+    </div>
+    <div class="mfoot"><button class="btn-s" onclick="closeModal('margin-modal')">Cancel</button><button class="btn-p" onclick="applyCustomMargins()">Apply</button></div>
+  </div>
+</div>
+
+<!-- CITATION MODAL -->
+<div class="overlay" id="citation-modal">
+  <div class="modal" style="min-width:340px">
+    <div class="mhdr">Insert Citation <button class="mclose" onclick="closeModal('citation-modal')">✕</button></div>
+    <div class="mbody">
+      <div class="fr"><label>Type</label><select id="cit-type" style="border:1px solid #ccc;border-radius:4px;padding:6px;font-size:13px;"><option value="book">Book</option><option value="journal">Journal Article</option><option value="website">Website</option><option value="other">Other</option></select></div>
+      <div class="fr"><label>Author(s)</label><input id="cit-author" type="text" placeholder="Last, First; Last, First"/></div>
+      <div class="fr"><label>Title</label><input id="cit-title" type="text" placeholder="Title of work"/></div>
+      <div class="fr"><label>Year</label><input id="cit-year" type="text" placeholder="2024"/></div>
+      <div class="fr"><label>Publisher / Journal / URL</label><input id="cit-pub" type="text" placeholder="Publisher or URL"/></div>
+    </div>
+    <div class="mfoot"><button class="btn-s" onclick="closeModal('citation-modal')">Cancel</button><button class="btn-p" onclick="insertCitation()">Insert</button></div>
+  </div>
+</div>
+
+<!-- COVER PAGE MODAL -->
+<div class="overlay" id="cover-modal">
+  <div class="modal">
+    <div class="mhdr">Cover Page <button class="mclose" onclick="closeModal('cover-modal')">✕</button></div>
+    <div class="mbody">
+      <div class="fr"><label>Title</label><input id="cov-title" type="text" placeholder="Document Title"/></div>
+      <div class="fr"><label>Subtitle</label><input id="cov-sub" type="text" placeholder="Subtitle or tagline"/></div>
+      <div class="fr"><label>Author</label><input id="cov-author" type="text" placeholder="Author Name"/></div>
+      <div class="fr"><label>Date</label><input id="cov-date" type="text" placeholder="Date"/></div>
+      <div class="fr"><label>Style</label>
+        <select id="cov-style" style="border:1px solid #ccc;border-radius:4px;padding:6px;font-size:13px;">
+          <option value="classic">Classic</option>
+          <option value="modern">Modern</option>
+          <option value="bold">Bold</option>
+          <option value="minimal">Minimal</option>
+        </select>
+      </div>
+    </div>
+    <div class="mfoot"><button class="btn-s" onclick="closeModal('cover-modal')">Cancel</button><button class="btn-p" onclick="insertCoverPage()">Insert</button></div>
+  </div>
+</div>
+
+<!-- READING MODE -->
+<div id="reading-overlay"><div id="reading-content"></div></div>
+<button id="reading-close" onclick="closeReadingMode()">✕</button>
+
+<!-- TABLE PICKER -->
+<div id="tpicker"><div id="tgrid"></div><p id="tlabel">0 × 0</p></div>
+
+<script>
+'use strict';
+
+const editor = document.getElementById('editor');
+const page = document.getElementById('page-1');
+let trackChanges = false;
+let dictating = false;
+let recognition = null;
+let footnoteCount = 0;
+let citationList = [];
+let findMatches = [];
+let findIndex = 0;
+let lastSavedContent = '';
+let autoSaveTimer = null;
+let typewriterMode = false;
+let gridlinesOn = false;
+let currentTheme = 'classic';
+
+// ══════════════════════════════════════════════════
+//   CORE
+// ══════════════════════════════════════════════════
+function execCmd(cmd, val) {
+  editor.focus();
+  try { document.execCommand(cmd, false, val || null); } catch(e){}
+  updateStatus(); syncBtns();
+}
+
+function switchTab(tab, btn) {
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+  btn.classList.add('active');
+  const panel = document.querySelector('[data-tab="'+tab+'"]');
+  if (panel) panel.classList.add('active');
+}
+
+// ══════════════════════════════════════════════════
+//   FONT / SIZE / COLOR
+// ══════════════════════════════════════════════════
+function applyFont() {
+  execCmd('fontName', document.getElementById('font-family').value);
+}
+function applyFontSize() {
+  const sz = parseInt(document.getElementById('font-size').value) || 12;
+  wrapSel(el => el.style.fontSize = sz + 'pt');
+}
+function changeFontSize(d) {
+  const inp = document.getElementById('font-size');
+  inp.value = Math.max(1, Math.min(144, (parseInt(inp.value) || 12) + d));
+  applyFontSize();
+}
+function applyFontColor() { execCmd('foreColor', document.getElementById('font-color').value); }
+function applyHL() { execCmd('hiliteColor', document.getElementById('hl-color').value); }
+function applyPageColor() {
+  document.querySelectorAll('.page').forEach(p => p.style.background = document.getElementById('page-color').value);
+}
+function applyDocFont() {
+  const f = document.getElementById('doc-font').value;
+  if (f) editor.style.fontFamily = f;
+  else editor.style.fontFamily = '';
+}
+function applyTextEffect(type) {
+  if (type === 'shadow') wrapSel(el => el.style.textShadow = '1px 1px 3px rgba(0,0,0,0.5)');
+}
+
+function wrapSel(styleFn) {
+  const sel = window.getSelection();
+  if (!sel || !sel.rangeCount) return;
+  const range = sel.getRangeAt(0);
+  if (range.collapsed) return;
+  const span = document.createElement('span');
+  styleFn(span);
+  try {
+    const frag = range.extractContents();
+    span.appendChild(frag);
+    range.insertNode(span);
+    sel.removeAllRanges();
+    const nr = document.createRange();
+    nr.selectNodeContents(span);
+    sel.addRange(nr);
+  } catch(e) {}
+  updateStatus();
+}
+
+function applyBlock(tag) { execCmd('formatBlock', tag); }
+function applyLSP() { editor.style.lineHeight = document.getElementById('lsp').value; }
+function applyParaSpacing() {
+  const v = document.getElementById('para-spacing').value + 'px';
+  editor.querySelectorAll('p').forEach(p => p.style.marginBottom = v);
+}
+function applyIndent() {
+  const l = document.getElementById('indent-left').value;
+  const r = document.getElementById('indent-right').value;
+  editor.style.paddingLeft = l; editor.style.paddingRight = r;
+}
+function applySpacing() {
+  const sb = document.getElementById('space-before').value;
+  const sa = document.getElementById('space-after').value;
+  editor.querySelectorAll('p,h1,h2,h3,h4').forEach(el => { el.style.marginTop = sb; el.style.marginBottom = sa; });
+}
+
+// Paragraph border/shading
+function applyParaBorder() {
+  const sel = window.getSelection();
+  if (!sel || sel.rangeCount === 0) return;
+  let el = sel.getRangeAt(0).startContainer;
+  while (el && el !== editor) {
+    if (el.nodeType === 1 && ['P','H1','H2','H3','H4','LI'].includes(el.tagName)) {
+      el.style.border = el.style.border ? '' : '1px solid #999';
+      el.style.padding = el.style.padding ? '' : '6px 10px';
+      return;
+    }
+    el = el.parentNode;
+  }
+}
+function applyParaShading() {
+  const sel = window.getSelection();
+  if (!sel || sel.rangeCount === 0) return;
+  let el = sel.getRangeAt(0).startContainer;
+  while (el && el !== editor) {
+    if (el.nodeType === 1 && ['P','H1','H2','H3','H4','LI'].includes(el.tagName)) {
+      el.style.background = el.style.background ? '' : '#f0f4ff';
+      el.style.padding = el.style.padding ? '' : '6px 10px';
+      return;
+    }
+    el = el.parentNode;
+  }
+}
+
+// ══════════════════════════════════════════════════
+//   SYNC BUTTONS
+// ══════════════════════════════════════════════════
+function syncBtns() {
+  const map = {
+    'b-bold':'bold','b-italic':'italic','b-under':'underline','b-strike':'strikeThrough',
+    'b-sub':'subscript','b-sup':'superscript',
+    'b-left':'justifyLeft','b-center':'justifyCenter','b-right':'justifyRight','b-justify':'justifyFull'
+  };
+  for (const [id, cmd] of Object.entries(map)) {
+    const el = document.getElementById(id);
+    if (el) el.classList.toggle('active', document.queryCommandState(cmd));
+  }
+  const mm = {'mb-bold':'bold','mb-italic':'italic','mb-under':'underline'};
+  for (const [id, cmd] of Object.entries(mm)) {
+    const el = document.getElementById(id);
+    if (el) el.classList.toggle('active', document.queryCommandState(cmd));
+  }
+  syncMini();
+}
+function syncMini() {
+  const map = {'mb2-bold':'bold','mb2-italic':'italic','mb2-under':'underline','mb2-strike':'strikeThrough'};
+  for (const [id, cmd] of Object.entries(map)) {
+    const el = document.getElementById(id);
+    if (el) el.classList.toggle('active', document.queryCommandState(cmd));
+  }
+}
+
+// ══════════════════════════════════════════════════
+//   INSERT HELPERS
+// ══════════════════════════════════════════════════
+function insertPageBreak() {
+  execCmd('insertHTML','<div style="page-break-after:always;border-top:2px dashed #ccc;margin:16px 0;text-align:center;color:#bbb;font-size:10px;letter-spacing:2px;">— PAGE BREAK —</div><p></p>');
+}
+function insertColumnBreak() {
+  execCmd('insertHTML','<div style="break-after:column;border-top:1px dashed #bbb;margin:8px 0;text-align:center;color:#bbb;font-size:9px;">Column Break</div>');
+}
+function insertHR() { execCmd('insertHTML','<hr/>'); }
+function insertDate() {
+  const d = new Date().toLocaleDateString('en-US',{weekday:'long',year:'numeric',month:'long',day:'numeric'});
+  execCmd('insertText', d);
+}
+function insertSym(ch) { execCmd('insertText', ch); }
+
+function insertComment() {
+  const txt = prompt('Comment text:');
+  if (!txt) return;
+  const id = 'cmt-' + Date.now();
+  const sel = window.getSelection();
+  let selectedText = sel && !sel.isCollapsed ? sel.toString() : 'Comment';
+  execCmd('insertHTML', '<mark class="comment-mark" data-cmt="'+id+'" title="'+txt.replace(/"/g,"'")+'">'+selectedText+'</mark>');
+  addCommentCard(id, txt, selectedText);
+}
+function addCommentCard(id, txt, ref) {
+  const list = document.getElementById('comments-list');
+  const noEl = list.querySelector('.no-comments');
+  if (noEl) noEl.remove();
+  const card = document.createElement('div');
+  card.className = 'comment-card';
+  card.id = 'card-'+id;
+  card.innerHTML = `<span class="cc-author">💬 Note</span><button class="cc-del" onclick="removeComment('${id}')">✕</button><div class="cc-text">${txt}</div><div style="font-size:9px;color:#aaa;margin-top:4px;">"${ref.substring(0,40)}"</div>`;
+  list.appendChild(card);
+}
+function removeComment(id) {
+  document.querySelectorAll('[data-cmt="'+id+'"]').forEach(el => {
+    el.replaceWith(el.textContent);
+  });
+  const card = document.getElementById('card-'+id);
+  if (card) card.remove();
+  if (!document.getElementById('comments-list').children.length) {
+    document.getElementById('comments-list').innerHTML = '<div class="no-comments">No comments yet.</div>';
+  }
+}
+function toggleCommentsPanel() {
+  document.getElementById('comments-panel').classList.toggle('open');
+}
+
+function insertTextBox() {
+  execCmd('insertHTML','<div contenteditable="true" style="border:1px solid #aaa;padding:10px 14px;min-width:180px;min-height:50px;display:inline-block;margin:8px 0;border-radius:3px;background:#fafafa;cursor:text;" onmousedown="event.stopPropagation()">Text box content</div>&nbsp;');
+}
+
+function insertTOC() {
+  const headings = editor.querySelectorAll('h1,h2,h3,h4');
+  if (!headings.length) { alert('No headings found. Add H1, H2, or H3 headings first.'); return; }
+  let toc = '<div id="toc-block" style="border:1px solid #ddd;border-radius:4px;padding:14px 18px;background:#fafafa;margin:12px 0;"><h3 style="font-size:13pt;margin-bottom:10px;border-bottom:2px solid #2b579a;padding-bottom:4px;color:#2b579a;">Table of Contents</h3>';
+  headings.forEach((h,i) => {
+    const id = 'heading-'+i;
+    h.id = id;
+    const indent = {'H1':'0','H2':'18px','H3':'36px','H4':'50px'}[h.tagName] || '0';
+    const size = {'H1':'13px','H2':'12px','H3':'11px','H4':'11px'}[h.tagName] || '12px';
+    const weight = h.tagName === 'H1' ? '700' : '400';
+    toc += `<div style="padding-left:${indent};margin:3px 0;font-size:${size};font-weight:${weight};"><a href="#${id}" style="color:#2b579a;text-decoration:none;">${h.textContent}</a></div>`;
+  });
+  toc += '</div><p></p>';
+  const saved = window.getSelection() && window.getSelection().rangeCount ? window.getSelection().getRangeAt(0) : null;
+  editor.focus();
+  const range = document.createRange();
+  range.setStart(editor, 0);
+  range.collapse(true);
+  const sel = window.getSelection();
+  sel.removeAllRanges();
+  sel.addRange(range);
+  execCmd('insertHTML', toc);
+}
+function updateTOC() {
+  const old = editor.querySelector('#toc-block');
+  if (old) old.remove();
+  insertTOC();
+}
+
+function insertFootnote() {
+  footnoteCount++;
+  const n = footnoteCount;
+  const text = prompt('Footnote text:') || 'Footnote text';
+  execCmd('insertHTML', `<sup class="footnote-ref" onclick="scrollToFn(${n})" title="${text}">[${n}]</sup>`);
+  // Append to footnote area
+  let fnArea = editor.querySelector('.footnote-area');
+  if (!fnArea) {
+    fnArea = document.createElement('div');
+    fnArea.className = 'footnote-area';
+    editor.appendChild(fnArea);
+  }
+  const entry = document.createElement('p');
+  entry.id = 'fn-'+n;
+  entry.style.cssText = 'margin:3px 0;font-size:10pt;';
+  entry.innerHTML = `<b>[${n}]</b> ${text}`;
+  fnArea.appendChild(entry);
+}
+function scrollToFn(n) {
+  const el = editor.querySelector('#fn-'+n);
+  if (el) el.scrollIntoView({behavior:'smooth'});
+}
+
+function insertEndnote() {
+  footnoteCount++;
+  const n = footnoteCount;
+  const text = prompt('Endnote text:') || 'Endnote text';
+  execCmd('insertHTML', `<sup class="footnote-ref" title="${text}">(${n})</sup>`);
+  // Add at very end
+  const p = document.createElement('p');
+  p.innerHTML = `<b>(${n})</b> ${text}`;
+  p.style.fontSize = '10pt';
+  editor.appendChild(p);
+}
+
+function openCitationModal() { openModal('citation-modal'); }
+function insertCitation() {
+  const type = document.getElementById('cit-type').value;
+  const author = document.getElementById('cit-author').value;
+  const title = document.getElementById('cit-title').value;
+  const year = document.getElementById('cit-year').value;
+  const pub = document.getElementById('cit-pub').value;
+  let ref = '';
+  if (type === 'book') ref = `${author} (${year}). <i>${title}</i>. ${pub}.`;
+  else if (type === 'journal') ref = `${author} (${year}). ${title}. <i>${pub}</i>.`;
+  else if (type === 'website') ref = `${author} (${year}). ${title}. Retrieved from ${pub}`;
+  else ref = `${author} (${year}). ${title}. ${pub}.`;
+  citationList.push(ref);
+  const n = citationList.length;
+  execCmd('insertHTML', `<sup style="color:var(--blue);font-weight:700;cursor:pointer;" title="${title}">[${n}]</sup>`);
+  closeModal('citation-modal');
+}
+function insertBibliography() {
+  if (!citationList.length) { alert('No citations added yet.'); return; }
+  let html = '<div style="border-top:2px solid #2b579a;margin-top:24px;padding-top:12px;"><h3 style="font-size:13pt;color:#2b579a;margin-bottom:8px;">References</h3>';
+  citationList.forEach((c,i) => {
+    html += `<p style="margin-bottom:6px;font-size:10pt;padding-left:20px;text-indent:-20px;">[${i+1}] ${c}</p>`;
+  });
+  html += '</div>';
+  execCmd('insertHTML', html);
+}
+
+// ══════════════════════════════════════════════════
+//   TABLE OPERATIONS
+// ══════════════════════════════════════════════════
+let tpOpen = false;
+function toggleTPicker() {
+  tpOpen = !tpOpen;
+  const p = document.getElementById('tpicker');
+  p.classList.toggle('open', tpOpen);
+  if (tpOpen) buildTG();
+}
+function buildTG() {
+  const g = document.getElementById('tgrid');
+  g.innerHTML = '';
+  for (let r = 1; r <= 6; r++) {
+    for (let c = 1; c <= 8; c++) {
+      const d = document.createElement('div');
+      d.className = 'tgc';
+      d.dataset.r = r; d.dataset.c = c;
+      d.addEventListener('mouseover', () => hlG(r, c));
+      d.addEventListener('click', () => { insertTable(r, c); toggleTPicker(); });
+      g.appendChild(d);
+    }
+  }
+}
+function hlG(rows, cols) {
+  document.querySelectorAll('.tgc').forEach(c => c.classList.toggle('hl', +c.dataset.r <= rows && +c.dataset.c <= cols));
+  document.getElementById('tlabel').textContent = rows + ' × ' + cols;
+}
+function insertTable(rows, cols) {
+  let h = '<table>';
+  h += '<tr>' + Array(cols).fill('<th>Header</th>').join('') + '</tr>';
+  for (let r = 1; r < rows; r++) h += '<tr>' + Array(cols).fill('<td>Cell</td>').join('') + '</tr>';
+  h += '</table><p></p>';
+  execCmd('insertHTML', h);
+}
+
+function getParentCell(node) {
+  while (node && node !== editor) {
+    if (node.tagName === 'TD' || node.tagName === 'TH') return node;
+    node = node.parentNode;
+  }
+  return null;
+}
+function getParentTable(node) {
+  while (node && node !== editor) {
+    if (node.tagName === 'TABLE') return node;
+    node = node.parentNode;
+  }
+  return null;
+}
+function tableAddRow() {
+  const sel = window.getSelection();
+  if (!sel || !sel.rangeCount) return;
+  const cell = getParentCell(sel.getRangeAt(0).startContainer);
+  if (!cell) return;
+  const row = cell.parentNode;
+  const newRow = row.cloneNode(true);
+  newRow.querySelectorAll('td,th').forEach(c => c.innerHTML = '&nbsp;');
+  row.parentNode.insertBefore(newRow, row.nextSibling);
+  hideContextMenu();
+}
+function tableAddCol() {
+  const sel = window.getSelection();
+  if (!sel || !sel.rangeCount) return;
+  const cell = getParentCell(sel.getRangeAt(0).startContainer);
+  if (!cell) return;
+  const idx = Array.from(cell.parentNode.cells).indexOf(cell);
+  const table = getParentTable(cell);
+  if (!table) return;
+  Array.from(table.rows).forEach(row => {
+    const newCell = row.cells[idx] ? row.cells[idx].cloneNode(true) : document.createElement('td');
+    newCell.innerHTML = '&nbsp;';
+    const ref = row.cells[idx + 1];
+    row.insertBefore(newCell, ref || null);
+  });
+  hideContextMenu();
+}
+function tableDelRow() {
+  const sel = window.getSelection();
+  if (!sel || !sel.rangeCount) return;
+  const cell = getParentCell(sel.getRangeAt(0).startContainer);
+  if (!cell) return;
+  cell.parentNode.remove();
+  hideContextMenu();
+}
+function tableDelCol() {
+  const sel = window.getSelection();
+  if (!sel || !sel.rangeCount) return;
+  const cell = getParentCell(sel.getRangeAt(0).startContainer);
+  if (!cell) return;
+  const idx = Array.from(cell.parentNode.cells).indexOf(cell);
+  const table = getParentTable(cell);
+  if (!table) return;
+  Array.from(table.rows).forEach(row => { if (row.cells[idx]) row.deleteCell(idx); });
+  hideContextMenu();
+}
+function tableDelete() {
+  const sel = window.getSelection();
+  if (!sel || !sel.rangeCount) return;
+  const table = getParentTable(sel.getRangeAt(0).startContainer);
+  if (table) table.remove();
+  hideContextMenu();
+}
+function tableMergeCells() {
+  const sel = window.getSelection();
+  if (!sel || sel.isCollapsed) { alert('Select multiple cells to merge.'); return; }
+  hideContextMenu();
+  // Simple merge: wrap content of selected text
+  execCmd('insertHTML', '<td colspan="2">' + sel.toString() + '</td>');
+}
+
+document.addEventListener('click', e => {
+  if (tpOpen && !document.getElementById('tpicker').contains(e.target) && e.target.id !== 'tbtn') {
+    document.getElementById('tpicker').classList.remove('open');
+    tpOpen = false;
+  }
+});
+
+// ══════════════════════════════════════════════════
+//   IMAGE
+// ══════════════════════════════════════════════════
+function insertImg(inp) {
+  if (!inp.files || !inp.files[0]) return;
+  const r = new FileReader();
+  r.onload = e => execCmd('insertHTML', '<img src="'+e.target.result+'" style="max-width:100%;border-radius:3px;cursor:pointer;" onclick="selectImg(this)"/>');
+  r.readAsDataURL(inp.files[0]);
+  inp.value = '';
+}
+function selectImg(img) {
+  document.querySelectorAll('#editor img').forEach(i => i.classList.remove('selected-img'));
+  img.classList.add('selected-img');
+}
+
+// ══════════════════════════════════════════════════
+//   LINK
+// ══════════════════════════════════════════════════
+let savedRange = null;
+function openLinkModal() {
+  const sel = window.getSelection();
+  if (sel && sel.rangeCount) savedRange = sel.getRangeAt(0).cloneRange();
+  document.getElementById('lnk-txt').value = sel ? sel.toString() : '';
+  document.getElementById('lnk-url').value = 'https://';
+  openModal('link-modal');
+}
+function insertLink() {
+  const txt = document.getElementById('lnk-txt').value;
+  const url = document.getElementById('lnk-url').value;
+  const target = document.getElementById('lnk-target').value;
+  if (!url || url === 'https://') return;
+  editor.focus();
+  if (savedRange) {
+    const s = window.getSelection();
+    s.removeAllRanges();
+    s.addRange(savedRange);
+  }
+  execCmd('insertHTML', '<a href="'+url+'" target="'+target+'">'+((txt||url))+'</a>');
+  closeModal('link-modal');
+}
+
+// ══════════════════════════════════════════════════
+//   SYMBOLS
+// ══════════════════════════════════════════════════
+const ALL_SYMS = ['©','®','™','°','±','×','÷','½','¼','¾','§','¶','†','‡','•','…','–','—','←','→','↑','↓','↔','↵','↩','∞','≠','≤','≥','∑','√','∫','π','α','β','γ','δ','ε','ζ','η','θ','ι','κ','λ','μ','ν','ξ','ο','ρ','σ','τ','υ','φ','χ','ψ','ω','Α','Β','Γ','Δ','Ε','€','£','¥','¢','₹','₩','₿','☑','☐','✓','✗','★','☆','♥','♦','♠','♣','♪','♫','☀','☁','☂','❄','⚡','🔥','✈','🏠','📧','📱','💡','🔑','⚙','🔒','🔓','📎','📌','✂','🖊','📋','📁','📂','🗑','💾','🖨','🖥','⌨','🖱','📡','🔍','🔎','⚠','ℹ','❓','❗','✅','❌','⭐','🌟','💫','🎯','🎨','🎭','🎪'];
+let filteredSyms = [...ALL_SYMS];
+
+function openSymModal() {
+  renderSyms(ALL_SYMS);
+  openModal('sym-modal');
+}
+function renderSyms(syms) {
+  const g = document.getElementById('sym-grid');
+  g.innerHTML = '';
+  syms.forEach(s => {
+    const b = document.createElement('button');
+    b.textContent = s;
+    b.title = 'U+' + s.codePointAt(0).toString(16).toUpperCase();
+    b.style.cssText = 'width:36px;height:36px;font-size:16px;border:1px solid #e0e0e0;border-radius:4px;cursor:pointer;background:#fff;transition:background .1s;';
+    b.onmouseover = () => b.style.background = '#e8f0fe';
+    b.onmouseleave = () => b.style.background = '#fff';
+    b.onclick = () => { insertSym(s); closeModal('sym-modal'); };
+    g.appendChild(b);
+  });
+}
+function filterSyms() {
+  const q = document.getElementById('sym-search').value.toLowerCase();
+  renderSyms(q ? ALL_SYMS.filter(s => s.toLowerCase().includes(q) || s.codePointAt(0).toString(16).toLowerCase().includes(q)) : ALL_SYMS);
+}
+
+// ══════════════════════════════════════════════════
+//   HEADER / FOOTER / PAGE NUMBERS
+// ══════════════════════════════════════════════════
+function toggleHdrFtr(type) {
+  const id = 'pg-' + type;
+  let el = document.getElementById(id);
+  if (el) { el.remove(); return; }
+  el = document.createElement('div');
+  el.id = id;
+  el.contentEditable = 'true';
+  el.style.cssText = 'position:absolute;' + (type === 'header' ? 'top:0' : 'bottom:0') + ';left:0;right:0;height:80px;padding:6px 96px;font-size:10pt;color:#666;border-' + (type === 'header' ? 'bottom' : 'top') + ':1px dashed #bbb;outline:none;background:rgba(250,250,250,.95);display:flex;align-items:center;';
+  el.innerHTML = '<i>' + (type === 'header' ? 'Header' : 'Footer') + ' — click to edit</i>';
+  page.appendChild(el);
+}
+
+function togglePageNumbers() {
+  const el = document.getElementById('page-num-display');
+  el.style.display = el.style.display === 'none' ? 'block' : 'none';
+}
+
+// ══════════════════════════════════════════════════
+//   VIEW
+// ══════════════════════════════════════════════════
+function toggleSidebar() {
+  document.getElementById('sidebar').classList.toggle('open');
+  if (document.getElementById('sidebar').classList.contains('open')) buildNav();
+}
+function buildNav() {
+  const l = document.getElementById('nav-list');
+  l.innerHTML = '';
+  const hs = editor.querySelectorAll('h1,h2,h3,h4');
+  if (!hs.length) { l.innerHTML = '<p style="font-size:11px;color:#999;padding:4px;">No headings found.</p>'; return; }
+  hs.forEach(h => {
+    const d = document.createElement('div');
+    d.className = 'nav-item';
+    const indent = {'H1':'0','H2':'10px','H3':'18px','H4':'24px'}[h.tagName] || '0';
+    d.style.paddingLeft = indent;
+    d.style.fontWeight = h.tagName === 'H1' ? '700' : '400';
+    d.style.fontSize = h.tagName === 'H1' ? '12px' : '11px';
+    d.textContent = h.textContent.substring(0, 40);
+    d.onclick = () => { h.scrollIntoView({behavior:'smooth'}); document.querySelectorAll('.nav-item').forEach(x=>x.classList.remove('active')); d.classList.add('active'); };
+    l.appendChild(d);
+  });
+}
+
+let rulerOn = true;
+function toggleRuler() { rulerOn = !rulerOn; document.getElementById('ruler-wrap').style.display = rulerOn ? '' : 'none'; }
+function toggleFullscreen() {
+  if (!document.fullscreenElement) document.documentElement.requestFullscreen().catch(() => {});
+  else document.exitFullscreen();
+}
+function setZoom(v) {
+  v = parseInt(v);
+  document.getElementById('zoom-range').value = v;
+  document.getElementById('zoom-lbl').textContent = v + '%';
+  document.getElementById('editor-area').style.zoom = v / 100;
+}
+function fitPage() {
+  const area = document.getElementById('editor-area');
+  const aW = area.clientWidth - 40;
+  const pW = 816;
+  const z = Math.min(100, Math.floor(aW / pW * 100));
+  setZoom(z);
+}
+function switchView(type) {
+  if (type === 'web') {
+    document.querySelectorAll('.page').forEach(p => { p.style.width = '100%'; p.style.boxShadow = 'none'; p.style.margin = '0'; });
+  } else {
+    document.querySelectorAll('.page').forEach(p => { p.style.width = ''; p.style.boxShadow = ''; p.style.margin = ''; });
+  }
+}
+function toggleGridlines() {
+  gridlinesOn = !gridlinesOn;
+  document.getElementById('gridlines-btn').classList.toggle('active', gridlinesOn);
+  editor.style.backgroundImage = gridlinesOn ? 'linear-gradient(rgba(100,140,255,.08) 1px, transparent 1px)' : '';
+  editor.style.backgroundSize = gridlinesOn ? '100% 1.5em' : '';
+}
+function openReadingMode() {
+  document.getElementById('reading-content').innerHTML = editor.innerHTML;
+  document.getElementById('reading-overlay').classList.add('open');
+  document.getElementById('reading-close').style.display = 'flex';
+}
+function closeReadingMode() {
+  document.getElementById('reading-overlay').classList.remove('open');
+  document.getElementById('reading-close').style.display = 'none';
+}
+function toggleFocusMode() {
+  document.getElementById('editor-area').classList.toggle('focus-mode');
+}
+function toggleTypewriterMode() {
+  typewriterMode = !typewriterMode;
+  document.getElementById('typewriter-btn').classList.toggle('active', typewriterMode);
+}
+function toggleDarkMode() {
+  document.body.classList.toggle('dark-mode');
+  document.getElementById('dark-btn').textContent = document.body.classList.contains('dark-mode') ? '☀' : '🌙';
+}
+
+// ══════════════════════════════════════════════════
+//   THEMES & DESIGN
+// ══════════════════════════════════════════════════
+function applyTheme(name) {
+  document.querySelector('.page').className = 'page theme-' + name;
+  currentTheme = name;
+}
+function applyParaStyle(type) {
+  if (type === 'compact') { editor.style.lineHeight = '1.2'; document.querySelectorAll('#editor p').forEach(p => p.style.marginBottom = '2px'); }
+  else if (type === 'spacious') { editor.style.lineHeight = '2'; document.querySelectorAll('#editor p').forEach(p => p.style.marginBottom = '16px'); }
+  else { editor.style.lineHeight = '1.5'; document.querySelectorAll('#editor p').forEach(p => p.style.marginBottom = '8px'); }
+}
+
+// Watermark
+function openWatermarkModal() { openModal('watermark-modal'); }
+function applyWatermark() {
+  const el = document.getElementById('watermark-el');
+  const txt = document.getElementById('wm-text').value || 'DRAFT';
+  const color = document.getElementById('wm-color').value;
+  const opacity = document.getElementById('wm-opacity').value;
+  el.textContent = txt;
+  el.style.color = color;
+  el.style.opacity = opacity;
+  el.classList.add('show');
+  closeModal('watermark-modal');
+}
+function removeWatermark() {
+  document.getElementById('watermark-el').classList.remove('show');
+  closeModal('watermark-modal');
+}
+function applyPageBorder() {
+  const p = document.querySelector('.page');
+  p.style.outline = p.style.outline ? '' : '3px double #2b579a';
+}
+
+// Cover Page
+function openCoverModal() {
+  document.getElementById('cov-title').value = document.getElementById('doc-title').value || '';
+  document.getElementById('cov-date').value = new Date().toLocaleDateString('en-US',{year:'numeric',month:'long',day:'numeric'});
+  openModal('cover-modal');
+}
+function insertCoverPage() {
+  const title = document.getElementById('cov-title').value;
+  const sub = document.getElementById('cov-sub').value;
+  const author = document.getElementById('cov-author').value;
+  const date = document.getElementById('cov-date').value;
+  const style = document.getElementById('cov-style').value;
+  let html = '';
+  if (style === 'classic') {
+    html = `<div style="page-break-after:always;text-align:center;padding:120px 60px 60px;border-bottom:4px double #2b579a;margin-bottom:40px;min-height:700px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;"><h1 style="font-size:36pt;color:#2b579a;margin-bottom:8px;border-bottom:2px solid #2b579a;padding-bottom:12px;">${title}</h1><p style="font-size:16pt;color:#555;font-style:italic;">${sub}</p><p style="font-size:12pt;margin-top:40px;color:#333;font-weight:700;">${author}</p><p style="font-size:11pt;color:#777;">${date}</p></div>`;
+  } else if (style === 'modern') {
+    html = `<div style="page-break-after:always;background:linear-gradient(135deg,#1e3f73,#2b579a);color:#fff;text-align:left;padding:80px;margin-bottom:40px;min-height:700px;display:flex;flex-direction:column;justify-content:flex-end;gap:12px;"><h1 style="font-size:40pt;margin-bottom:6px;line-height:1.1;">${title}</h1><p style="font-size:16pt;opacity:.8;margin-bottom:30px;">${sub}</p><div style="border-top:2px solid rgba(255,255,255,.4);padding-top:16px;"><p style="font-size:12pt;font-weight:700;">${author}</p><p style="font-size:11pt;opacity:.7;">${date}</p></div></div>`;
+  } else if (style === 'bold') {
+    html = `<div style="page-break-after:always;background:#111;color:#fff;text-align:center;padding:100px 60px;margin-bottom:40px;min-height:700px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:20px;"><h1 style="font-size:52pt;font-weight:900;letter-spacing:-2px;text-transform:uppercase;background:linear-gradient(90deg,#ff6b6b,#ffd93d);-webkit-background-clip:text;-webkit-text-fill-color:transparent;">${title}</h1><p style="font-size:14pt;color:#aaa;text-transform:uppercase;letter-spacing:4px;">${sub}</p><p style="font-size:11pt;color:#666;margin-top:40px;">${author} · ${date}</p></div>`;
+  } else {
+    html = `<div style="page-break-after:always;background:#fff;border-left:6px solid #2b579a;padding:100px 60px;margin-bottom:40px;min-height:700px;display:flex;flex-direction:column;justify-content:center;gap:12px;"><h1 style="font-size:38pt;font-weight:300;color:#1a1a1a;">${title}</h1><p style="font-size:14pt;color:#888;">${sub}</p><p style="font-size:11pt;color:#aaa;margin-top:40px;">${author} · ${date}</p></div>`;
+  }
+  const range = document.createRange();
+  range.setStart(editor, 0);
+  range.collapse(true);
+  const sel = window.getSelection();
+  sel.removeAllRanges();
+  sel.addRange(range);
+  execCmd('insertHTML', html);
+  closeModal('cover-modal');
+}
+
+// ══════════════════════════════════════════════════
+//   FORMAT PAINTER
+// ══════════════════════════════════════════════════
+let fmtOn = false, capturedCSS = null;
+function toggleFmtPainter() {
+  fmtOn = !fmtOn;
+  document.getElementById('fp-btn').classList.toggle('active', fmtOn);
+  const sel = window.getSelection();
+  if (fmtOn && sel && sel.rangeCount && !sel.isCollapsed) {
+    capturedCSS = sel.getRangeAt(0).startContainer.parentElement.style.cssText;
+  }
+  editor.style.cursor = fmtOn ? 'copy' : '';
+}
+editor.addEventListener('mouseup', () => {
+  if (fmtOn && capturedCSS) {
+    wrapSel(el => el.style.cssText = capturedCSS);
+    fmtOn = false; capturedCSS = null;
+    document.getElementById('fp-btn').classList.remove('active');
+    editor.style.cursor = '';
+  }
+  syncBtns(); updateStatus();
+  showMinibar();
+});
+
+// ══════════════════════════════════════════════════
+//   PASTE AS PLAIN
+// ══════════════════════════════════════════════════
+function pastePlain() {
+  navigator.clipboard.readText().then(t => execCmd('insertText', t)).catch(() => {
+    const txt = prompt('Paste text here (plain):');
+    if (txt) execCmd('insertText', txt);
+  });
+}
+
+// ══════════════════════════════════════════════════
+//   MINI TOOLBAR
+// ══════════════════════════════════════════════════
+function showMinibar() {
+  const sel = window.getSelection();
+  const mb = document.getElementById('minibar');
+  if (!sel || sel.isCollapsed || !sel.rangeCount) { mb.classList.remove('show'); return; }
+  const range = sel.getRangeAt(0);
+  if (!editor.contains(range.commonAncestorContainer)) { mb.classList.remove('show'); return; }
+  const rect = range.getBoundingClientRect();
+  if (!rect.width) { mb.classList.remove('show'); return; }
+  mb.classList.add('show');
+  const top = Math.max(4, rect.top - 48 + window.scrollY);
+  const left = Math.min(window.innerWidth - 280, Math.max(4, rect.left + rect.width / 2 - 140));
+  mb.style.top = top + 'px';
+  mb.style.left = left + 'px';
+  syncMini();
+}
+document.addEventListener('mousedown', e => {
+  const mb = document.getElementById('minibar');
+  if (!mb.contains(e.target) && e.target !== editor && !editor.contains(e.target)) {
+    mb.classList.remove('show');
+  }
+});
+
+// ══════════════════════════════════════════════════
+//   CONTEXT MENU
+// ══════════════════════════════════════════════════
+document.addEventListener('contextmenu', e => {
+  const inEditor = editor.contains(e.target) || e.target === editor;
+  if (!inEditor) return;
+  e.preventDefault();
+  const menu = document.getElementById('context-menu');
+  const inCell = !!getParentCell(e.target);
+  ['ctx-table-sep','ctx-addrow','ctx-addcol','ctx-delrow','ctx-delcol','ctx-deltable','ctx-mergerow'].forEach(id => {
+    document.getElementById(id).style.display = inCell ? '' : 'none';
+  });
+  menu.style.left = Math.min(e.clientX, window.innerWidth - 200) + 'px';
+  menu.style.top = Math.min(e.clientY, window.innerHeight - menu.scrollHeight - 10) + 'px';
+  menu.classList.add('show');
+});
+document.addEventListener('click', e => {
+  if (!document.getElementById('context-menu').contains(e.target)) hideContextMenu();
+});
+document.addEventListener('scroll', () => hideContextMenu(), true);
+function hideContextMenu() { document.getElementById('context-menu').classList.remove('show'); }
+function doSelectAll() { execCmd('selectAll'); hideContextMenu(); }
+
+// ══════════════════════════════════════════════════
+//   FIND & REPLACE
+// ══════════════════════════════════════════════════
+function openFindBar(focusReplace) {
+  document.getElementById('findbar').classList.add('open');
+  setTimeout(() => document.getElementById(focusReplace ? 'repl-inp' : 'find-inp').focus(), 50);
+}
+function closeFindBar() {
+  document.getElementById('findbar').classList.remove('open');
+  clearFindHighlights();
+}
+
+function liveFind() {
+  clearFindHighlights();
+  const q = document.getElementById('find-inp').value;
+  if (q.length < 1) { document.getElementById('find-count').textContent = ''; return; }
+  highlightAll(q);
+}
+function highlightAll(q) {
+  clearFindHighlights();
+  if (!q) return;
+  const caseSensitive = document.getElementById('find-case').checked;
+  const wholeWord = document.getElementById('find-whole').checked;
+  const flags = caseSensitive ? 'g' : 'gi';
+  let pattern = q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  if (wholeWord) pattern = '\\b' + pattern + '\\b';
+  const re = new RegExp(pattern, flags);
+  // Walk text nodes
+  findMatches = [];
+  const walker = document.createTreeWalker(editor, NodeFilter.SHOW_TEXT);
+  const textNodes = [];
+  while (walker.nextNode()) textNodes.push(walker.currentNode);
+  textNodes.forEach(node => {
+    if (node.parentNode && node.parentNode.classList && node.parentNode.classList.contains('find-highlight')) return;
+    let match;
+    const parts = [];
+    let last = 0;
+    re.lastIndex = 0;
+    while ((match = re.exec(node.textContent)) !== null) {
+      if (last < match.index) parts.push(document.createTextNode(node.textContent.slice(last, match.index)));
+      const span = document.createElement('mark');
+      span.className = 'find-highlight';
+      span.textContent = match[0];
+      parts.push(span);
+      findMatches.push(span);
+      last = match.index + match[0].length;
+    }
+    if (parts.length) {
+      if (last < node.textContent.length) parts.push(document.createTextNode(node.textContent.slice(last)));
+      const frag = document.createDocumentFragment();
+      parts.forEach(p => frag.appendChild(p));
+      node.parentNode.replaceChild(frag, node);
+    }
+  });
+  findIndex = 0;
+  document.getElementById('find-count').textContent = findMatches.length ? (findMatches.length + ' found') : 'Not found';
+  if (findMatches.length) scrollToMatch(0);
+}
+function clearFindHighlights() {
+  editor.querySelectorAll('.find-highlight').forEach(el => {
+    el.replaceWith(document.createTextNode(el.textContent));
+  });
+  editor.normalize();
+  findMatches = [];
+  findIndex = 0;
+  document.getElementById('find-count').textContent = '';
+}
+function scrollToMatch(i) {
+  findMatches.forEach(m => m.classList.remove('current'));
+  if (findMatches[i]) {
+    findMatches[i].classList.add('current');
+    findMatches[i].scrollIntoView({behavior:'smooth', block:'center'});
+  }
+}
+function findNext() {
+  const q = document.getElementById('find-inp').value;
+  if (!q) return;
+  if (!findMatches.length) highlightAll(q);
+  if (!findMatches.length) return;
+  findIndex = (findIndex + 1) % findMatches.length;
+  scrollToMatch(findIndex);
+}
+function findPrev() {
+  const q = document.getElementById('find-inp').value;
+  if (!q) return;
+  if (!findMatches.length) highlightAll(q);
+  if (!findMatches.length) return;
+  findIndex = (findIndex - 1 + findMatches.length) % findMatches.length;
+  scrollToMatch(findIndex);
+}
+function doReplace() {
+  const q = document.getElementById('find-inp').value;
+  const r = document.getElementById('repl-inp').value;
+  if (!q) return;
+  if (!findMatches.length) highlightAll(q);
+  if (findMatches[findIndex]) {
+    findMatches[findIndex].replaceWith(document.createTextNode(r));
+    findMatches.splice(findIndex, 1);
+    if (findIndex >= findMatches.length) findIndex = 0;
+    document.getElementById('find-count').textContent = findMatches.length + ' found';
+    if (findMatches[findIndex]) scrollToMatch(findIndex);
+  }
+  updateStatus();
+}
+function doReplaceAll() {
+  const q = document.getElementById('find-inp').value;
+  const r = document.getElementById('repl-inp').value;
+  if (!q) return;
+  highlightAll(q);
+  let count = findMatches.length;
+  findMatches.forEach(m => m.replaceWith(document.createTextNode(r)));
+  findMatches = [];
+  editor.normalize();
+  document.getElementById('find-count').textContent = count + ' replaced';
+  updateStatus();
+}
+
+// ══════════════════════════════════════════════════
+//   REVIEW
+// ══════════════════════════════════════════════════
+function doSpell() {
+  editor.spellcheck = true;
+  editor.focus();
+  alert('Spell check enabled. Right-click underlined words for suggestions.');
+}
+function doWordCount() {
+  const t = editor.innerText.trim();
+  const w = t ? t.split(/\s+/).filter(Boolean).length : 0;
+  const paras = editor.querySelectorAll('p,h1,h2,h3,h4,li').length;
+  const sents = (t.match(/[.!?]+/g) || []).length;
+  const avgWPM = 200;
+  const readMin = Math.ceil(w / avgWPM);
+  document.getElementById('wc-body').innerHTML = `
+    <table style="width:100%;border-collapse:collapse;font-size:13px;">
+      ${[['Words', w.toLocaleString()],['Characters (w/ spaces)', t.length.toLocaleString()],['Characters (no spaces)', t.replace(/\s/g,'').length.toLocaleString()],['Paragraphs', paras.toLocaleString()],['Sentences', sents.toLocaleString()],['Lines', t.split('\n').length.toLocaleString()],['Estimated Read Time', readMin + ' min']].map(([l,v]) =>
+        `<tr style="border-bottom:1px solid #eee"><td style="padding:7px 4px;color:#666;font-size:13px;">${l}</td><td style="font-weight:700;padding:7px 4px;">${v}</td></tr>`
+      ).join('')}
+    </table>`;
+  openModal('wc-modal');
+}
+
+function toggleTrackChanges() {
+  trackChanges = !trackChanges;
+  document.getElementById('track-btn').classList.toggle('active', trackChanges);
+  document.getElementById('st-track').style.display = trackChanges ? '' : 'none';
+  document.getElementById('track-sep').style.display = trackChanges ? '' : 'none';
+  if (trackChanges) alert('Track Changes ON. New insertions will be highlighted. This uses simplified tracking.');
+}
+
+// ══════════════════════════════════════════════════
+//   DICTATION
+// ══════════════════════════════════════════════════
+function startDictation() {
+  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SpeechRecognition) { alert('Speech recognition not supported in this browser. Try Chrome or Edge.'); return; }
+  if (dictating) {
+    recognition && recognition.stop();
+    dictating = false;
+    document.getElementById('dictate-btn').classList.remove('active');
+    document.getElementById('dictate-btn').innerHTML = '🎤<br>Dictate';
+    return;
+  }
+  recognition = new SpeechRecognition();
+  recognition.lang = document.getElementById('lang-select').value || 'en-US';
+  recognition.continuous = true;
+  recognition.interimResults = true;
+  recognition.onresult = e => {
+    const interim = Array.from(e.results).filter(r => !r.isFinal).map(r => r[0].transcript).join('');
+    const final = Array.from(e.results).filter(r => r.isFinal).map(r => r[0].transcript).join('');
+    if (final) { execCmd('insertText', final); }
+  };
+  recognition.onerror = e => { dictating = false; document.getElementById('dictate-btn').classList.remove('active'); };
+  recognition.onend = () => { if (dictating) recognition.start(); };
+  recognition.start();
+  dictating = true;
+  document.getElementById('dictate-btn').classList.add('active');
+  document.getElementById('dictate-btn').innerHTML = '⏹<br>Stop';
+}
+
+function doTranslate() {
+  const sel = window.getSelection();
+  const txt = sel && !sel.isCollapsed ? sel.toString() : editor.innerText.substring(0, 200);
+  if (!txt.trim()) { alert('Select text to translate.'); return; }
+  window.open('https://translate.google.com/?sl=auto&tl=en&text=' + encodeURIComponent(txt.substring(0,500)), '_blank');
+}
+
+function setLanguage(lang) {
+  editor.setAttribute('lang', lang);
+  if (recognition) recognition.lang = lang;
+}
+
+// ══════════════════════════════════════════════════
+//   LAYOUT
+// ══════════════════════════════════════════════════
+function applyPageSize() {
+  const sizes = {letter:{w:'816px',h:'1056px'},a4:{w:'794px',h:'1123px'},legal:{w:'816px',h:'1344px'},a5:{w:'559px',h:'794px'},b5:{w:'665px',h:'945px'},tabloid:{w:'1056px',h:'1632px'}};
+  const s = sizes[document.getElementById('pgsize').value] || sizes.letter;
+  document.querySelectorAll('.page').forEach(p => { p.style.width = s.w; p.style.minHeight = s.h; });
+}
+function setOrient(d) {
+  const pg = document.querySelector('.page');
+  const w = pg.offsetWidth, h = pg.offsetHeight;
+  if (d === 'landscape') { pg.style.width = Math.max(w,h) + 'px'; pg.style.minHeight = Math.min(w,h) + 'px'; }
+  else { pg.style.width = Math.min(w,h) + 'px'; pg.style.minHeight = Math.max(w,h) + 'px'; }
+}
+function setMargins(t) {
+  const m = {normal:'96px',narrow:'48px',wide:'144px',mirrored:'72px 120px'}[t] || '96px';
+  document.querySelectorAll('.page').forEach(p => p.style.padding = m);
+}
+function openMarginModal() { openModal('margin-modal'); }
+function applyCustomMargins() {
+  const t = document.getElementById('mg-top').value;
+  const b = document.getElementById('mg-bot').value;
+  const l = document.getElementById('mg-left').value;
+  const r = document.getElementById('mg-right').value;
+  document.querySelectorAll('.page').forEach(p => p.style.padding = t+'px '+r+'px '+b+'px '+l+'px');
+  closeModal('margin-modal');
+}
+function setCols(n) {
+  editor.style.columnCount = n > 1 ? n : '';
+  editor.style.columnGap = n > 1 ? '40px' : '';
+}
+
+// ══════════════════════════════════════════════════
+//   STATUS / AUTOSAVE
+// ══════════════════════════════════════════════════
+function updateStatus() {
+  const t = editor.innerText.trim();
+  const w = t ? t.split(/\s+/).filter(Boolean).length : 0;
+  document.getElementById('st-words').textContent = 'Words: ' + w.toLocaleString();
+  document.getElementById('st-chars').textContent = 'Chars: ' + t.length.toLocaleString();
+  document.getElementById('wc-badge').textContent = 'Words: ' + w.toLocaleString();
+  // Selection count
+  const sel = window.getSelection();
+  const sb = document.getElementById('sel-badge');
+  if (sel && !sel.isCollapsed) {
+    const st = sel.toString();
+    const sw = st.trim() ? st.trim().split(/\s+/).filter(Boolean).length : 0;
+    sb.textContent = '| Sel: ' + sw + ' words';
+    sb.style.display = '';
+  } else { sb.style.display = 'none'; }
+  scheduleAutoSave();
+}
+function scheduleAutoSave() {
+  clearTimeout(autoSaveTimer);
+  autoSaveTimer = setTimeout(() => {
+    const content = editor.innerHTML + '|' + document.getElementById('doc-title').value;
+    if (content !== lastSavedContent) {
+      try { localStorage.setItem('wordcraft_autosave', JSON.stringify({ content: editor.innerHTML, title: document.getElementById('doc-title').value, ts: Date.now() })); } catch(e) {}
+      lastSavedContent = content;
+      const ind = document.getElementById('autosave-indicator');
+      ind.textContent = '● Saved';
+      ind.style.color = 'rgba(255,255,255,.7)';
+    }
+  }, 1500);
+  document.getElementById('autosave-indicator').textContent = '○ Editing…';
+  document.getElementById('autosave-indicator').style.color = 'rgba(255,255,255,.5)';
+}
+function loadAutoSave() {
+  try {
+    const data = localStorage.getItem('wordcraft_autosave');
+    if (data) {
+      const d = JSON.parse(data);
+      const age = (Date.now() - d.ts) / 1000 / 60;
+      if (age < 60 * 24 && confirm('Restore autosaved document from ' + Math.round(age) + ' minutes ago?')) {
+        editor.innerHTML = d.content;
+        document.getElementById('doc-title').value = d.title || 'Untitled Document';
+        updateStatus();
+      }
+    }
+  } catch(e) {}
+}
+
+editor.addEventListener('input', () => { updateStatus(); syncBtns(); if (typewriterMode) scrollTypewriter(); });
+editor.addEventListener('keyup', e => { syncBtns(); updateStatus(); });
+editor.addEventListener('mouseup', () => { setTimeout(showMinibar, 0); });
+editor.addEventListener('touchend', () => { setTimeout(showMinibar, 100); });
+editor.addEventListener('selectionchange', () => updateStatus());
+
+function scrollTypewriter() {
+  const sel = window.getSelection();
+  if (sel && sel.rangeCount) {
+    const rect = sel.getRangeAt(0).getBoundingClientRect();
+    const mid = window.innerHeight / 2;
+    window.scrollBy(0, rect.top - mid);
+  }
+}
+
+// Smart typography
+editor.addEventListener('keydown', e => {
+  if (typewriterMode && (e.key === 'ArrowUp' || e.key === 'ArrowDown')) {
+    e.preventDefault();
+    document.getElementById('editor-area').scrollBy(0, e.key === 'ArrowDown' ? 24 : -24);
+  }
+});
+
+// ══════════════════════════════════════════════════
+//   KEYBOARD SHORTCUTS
+// ══════════════════════════════════════════════════
+document.addEventListener('keydown', e => {
+  const ctrl = e.ctrlKey || e.metaKey;
+  if (ctrl) {
+    if (e.key === 's') { e.preventDefault(); saveDoc(); }
+    if (e.key === 'h') { e.preventDefault(); openFindBar(); }
+    if (e.key === 'f') { e.preventDefault(); openFindBar(); }
+    if (e.key === 'p') { e.preventDefault(); window.print(); }
+    if (e.key === 'e') { e.preventDefault(); execCmd('justifyCenter'); }
+    if (e.key === 'l') { e.preventDefault(); execCmd('justifyLeft'); }
+    if (e.key === 'r') { e.preventDefault(); execCmd('justifyRight'); }
+    if (e.key === 'j') { e.preventDefault(); execCmd('justifyFull'); }
+    if (e.key === '=') { e.preventDefault(); execCmd('superscript'); }
+    if (e.key === '-' && e.shiftKey) { e.preventDefault(); execCmd('subscript'); }
+    if (e.key === '1') { e.preventDefault(); applyBlock('h1'); }
+    if (e.key === '2') { e.preventDefault(); applyBlock('h2'); }
+    if (e.key === '3') { e.preventDefault(); applyBlock('h3'); }
+    if (e.key === '0') { e.preventDefault(); applyBlock('p'); }
+    if (e.shiftKey && e.key === 'C') { e.preventDefault(); toggleFmtPainter(); }
+  }
+  if (e.key === 'Tab' && document.activeElement === editor) {
+    e.preventDefault();
+    execCmd('insertHTML', '&emsp;&emsp;');
+  }
+  if (e.key === 'Escape') {
+    closeFindBar();
+    hideContextMenu();
+    document.getElementById('minibar').classList.remove('show');
+    closeReadingMode();
+  }
+});
+
+// ══════════════════════════════════════════════════
+//   MODALS
+// ══════════════════════════════════════════════════
+function openModal(id) { document.getElementById(id).classList.add('open'); }
+function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+document.querySelectorAll('.overlay').forEach(m => m.addEventListener('click', e => { if (e.target === m) m.classList.remove('open'); }));
+
+// ══════════════════════════════════════════════════
+//   DOC MANAGEMENT
+// ══════════════════════════════════════════════════
+function newDoc() {
+  if (!confirm('Create a new document? Unsaved changes will be lost.')) return;
+  editor.innerHTML = '<p>Start typing your document here…</p>';
+  document.getElementById('doc-title').value = 'Untitled Document';
+  footnoteCount = 0; citationList = [];
+  updateStatus();
+  editor.focus();
+}
+
+function saveDoc() {
+  const title = document.getElementById('doc-title').value || 'document';
+  const html = `<!DOCTYPE html><html><head><meta charset="UTF-8"><title>${title}</title><link href="https://fonts.googleapis.com/css2?family=Lato:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet"><style>body{font-family:Lato,Arial,sans-serif;font-size:12pt;line-height:1.5;max-width:800px;margin:80px auto;padding:0 40px}table{border-collapse:collapse;width:100%}td,th{border:1px solid #aaa;padding:5px 8px}th{background:#2b579a;color:#fff}h1{font-size:26pt}h2{font-size:19pt;color:#2b579a}h3{font-size:14pt}a{color:#2b579a}blockquote{border-left:4px solid #2b579a;padding-left:16px;color:#555;font-style:italic}pre{background:#f5f5f5;border:1px solid #ddd;border-radius:4px;padding:10px}.find-highlight{background:none;color:inherit}mark.find-highlight{background:none;color:inherit}</style></head><body>${editor.innerHTML}</body></html>`;
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([html], {type:'text/html'}));
+  a.download = title.replace(/\s+/g,'_') + '.html';
+  a.click();
+  URL.revokeObjectURL(a.href);
+  document.getElementById('autosave-indicator').textContent = '● Saved';
+}
+
+function exportPDF() {
+  // Remove highlights first
+  const tempHighlights = editor.querySelectorAll('.find-highlight');
+  tempHighlights.forEach(m => { m.outerHTML = m.textContent; });
+  editor.normalize();
+  const title = document.getElementById('doc-title').value || 'document';
+  const clone = document.createElement('div');
+  clone.style.cssText = 'font-family:Lato,Arial,sans-serif;font-size:12pt;line-height:1.5;padding:40px 60px;max-width:794px;background:#fff;color:#000;';
+  clone.innerHTML = editor.innerHTML;
+  html2pdf().from(clone).set({
+    margin:[10,10,10,10],
+    filename:title.replace(/\s+/g,'_')+'.pdf',
+    image:{type:'jpeg',quality:.98},
+    html2canvas:{scale:2,useCORS:true,allowTaint:true,logging:false},
+    jsPDF:{unit:'mm',format:'a4',orientation:'portrait'}
+  }).save();
+}
+
+// ══════════════════════════════════════════════════
+//   RULER
+// ══════════════════════════════════════════════════
+function drawRuler() {
+  const c = document.getElementById('ruler-canvas');
+  const ctx = c.getContext('2d');
+  ctx.clearRect(0,0,c.width,c.height);
+  ctx.fillStyle = '#eee'; ctx.fillRect(0,0,c.width,c.height);
+  ctx.fillStyle = '#ddd'; ctx.fillRect(0,0,96,18); ctx.fillRect(720,0,96,18);
+  ctx.strokeStyle = '#999'; ctx.fillStyle = '#555'; ctx.font = '8px Arial'; ctx.textAlign = 'center';
+  for (let i = 0; i <= 720; i++) {
+    const x = 96 + i, inch = i / 96;
+    if (i % 96 === 0) {
+      ctx.beginPath(); ctx.moveTo(x,6); ctx.lineTo(x,18); ctx.stroke();
+      if (inch > 0) ctx.fillText(inch, x, 6);
+    } else if (i % 48 === 0) {
+      ctx.beginPath(); ctx.moveTo(x,11); ctx.lineTo(x,18); ctx.stroke();
+    } else if (i % 12 === 0) {
+      ctx.beginPath(); ctx.moveTo(x,14); ctx.lineTo(x,18); ctx.stroke();
+    }
+  }
+  // Tab stop indicator
+  ctx.fillStyle = '#2b579a';
+  ctx.beginPath(); ctx.moveTo(96,14); ctx.lineTo(100,18); ctx.lineTo(92,18); ctx.closePath(); ctx.fill();
+}
+drawRuler();
+
+// ══════════════════════════════════════════════════
+//   MOBILE FORMAT PANEL
+// ══════════════════════════════════════════════════
+const FONTS = [
+  {label:'Lato',value:'Lato'},{label:'Arial',value:'Arial'},{label:'Verdana',value:'Verdana'},
+  {label:'Raleway',value:'Raleway'},{label:'Nunito',value:'Nunito'},{label:'Oswald',value:'Oswald'},
+  {label:'Times New Roman',value:'Times New Roman'},{label:'Georgia',value:'Georgia'},
+  {label:'Merriweather',value:'Merriweather'},{label:'Playfair Display',value:'Playfair Display'},
+  {label:'Crimson Text',value:'Crimson Text'},{label:'Courier New',value:'Courier New'},
+  {label:'Roboto Mono',value:'Roboto Mono'},{label:'Abril Fatface',value:'Abril Fatface'},
+  {label:'Pacifico',value:'Pacifico'},{label:'Dancing Script',value:'Dancing Script'},
+  {label:'Lobster',value:'Lobster'},{label:'Impact',value:'Impact'},{label:'Comic Sans MS',value:'Comic Sans MS'},
+];
+
+const COLORS = [
+  '#000000','#1a1a1a','#333333','#555555','#777777','#999999','#bbbbbb','#dddddd','#eeeeee','#ffffff',
+  '#ff0000','#ff4400','#ff8800','#ffcc00','#ffff00','#aaff00','#55ff00','#00ff00','#00ff55','#00ffaa',
+  '#00ffff','#00aaff','#0055ff','#0000ff','#5500ff','#aa00ff','#ff00ff','#ff00aa','#ff0055','#cc0000',
+  '#2b579a','#1e3f73','#217346','#107c10','#d83b01','#7b1fa2','#006064','#1b5e20','#bf360c','#3e2723',
+  '#ef9a9a','#f48fb1','#ce93d8','#9fa8da','#81d4fa','#80deea','#a5d6a7','#c5e1a5','#ffe082','#ffab91',
+];
+
+let fpSz = 12, tblR = 3, tblC = 3;
+
+function openFP(type) {
+  const panel = document.getElementById('fmt-panel');
+  const body = document.getElementById('fp-body');
+  const title = document.getElementById('fp-title');
+  document.getElementById('fp-overlay').style.display = 'block';
+  panel.classList.add('open');
+
+  if (type === 'font') {
+    title.textContent = 'Choose Font';
+    const cur = (document.queryCommandValue('fontName') || 'Lato').replace(/['"]/g,'');
+    body.innerHTML = '<div class="fp-section"><div class="font-grid" id="fg-mob"></div></div>';
+    const g = document.getElementById('fg-mob');
+    FONTS.forEach(f => {
+      const d = document.createElement('div');
+      d.className = 'font-option' + (f.value === cur ? ' selected' : '');
+      d.style.fontFamily = f.value; d.textContent = f.label;
+      d.onclick = () => { execCmd('fontName', f.value); document.getElementById('font-family').value = f.value; g.querySelectorAll('.font-option').forEach(x => x.classList.remove('selected')); d.classList.add('selected'); };
+      g.appendChild(d);
+    });
+  } else if (type === 'size') {
+    title.textContent = 'Font Size';
+    fpSz = parseInt(document.getElementById('font-size').value) || 12;
+    body.innerHTML = `<div class="fp-section"><div class="size-stepper"><button onclick="adjSz(-2)">−</button><div id="fp-sz" style="font-size:24px;font-weight:700;min-width:46px;text-align:center;">${fpSz}</div><button onclick="adjSz(2)">+</button></div><div style="display:flex;flex-wrap:wrap;gap:7px;margin-top:14px;">${[8,9,10,11,12,14,16,18,20,24,28,32,36,48,60,72,96].map(s => `<button onclick="setSz(${s})" style="padding:6px 12px;border:1px solid #ccc;border-radius:5px;font-size:13px;background:#f5f5f5;cursor:pointer;touch-action:manipulation;">${s}</button>`).join('')}</div></div>`;
+  } else if (type === 'color') {
+    title.textContent = 'Colors';
+    body.innerHTML = `<div class="fp-section"><h4>Font Color</h4><div class="color-palette" id="fc-p"></div></div><div class="fp-section"><h4>Highlight</h4><div class="color-palette" id="hl-p"></div></div><div class="fp-section"><h4>Custom</h4><div style="display:flex;gap:10px;align-items:flex-end;"><div><div style="font-size:10px;color:#999;margin-bottom:3px;">Font</div><input type="color" id="fp-fc" value="#000000" style="width:48px;height:38px;border:1px solid #ccc;border-radius:5px;cursor:pointer;"/></div><div><div style="font-size:10px;color:#999;margin-bottom:3px;">Highlight</div><input type="color" id="fp-hl" value="#FFFF00" style="width:48px;height:38px;border:1px solid #ccc;border-radius:5px;cursor:pointer;"/></div><button onclick="applyCustomC()" style="padding:9px 16px;background:var(--blue);color:#fff;border:none;border-radius:7px;font-size:13px;cursor:pointer;touch-action:manipulation;">Apply</button></div></div>`;
+    COLORS.forEach(c => {
+      const fc = document.createElement('div'); fc.className = 'cp-swatch'; fc.style.background = c;
+      fc.onclick = () => { execCmd('foreColor', c); document.getElementById('font-color').value = c; };
+      document.getElementById('fc-p').appendChild(fc);
+      const hl = document.createElement('div'); hl.className = 'cp-swatch'; hl.style.background = c;
+      hl.onclick = () => { execCmd('hiliteColor', c); document.getElementById('hl-color').value = c; };
+      document.getElementById('hl-p').appendChild(hl);
+    });
+  } else if (type === 'styles') {
+    title.textContent = 'Paragraph Style';
+    body.innerHTML = `<div class="fp-section"><div style="display:flex;flex-direction:column;gap:5px;">
+      ${[['p','¶ Normal','font-size:15px'],['h1','Heading 1','font-size:22px;font-weight:700'],['h2','Heading 2','font-size:18px;font-weight:700;color:var(--blue)'],['h3','Heading 3','font-size:15px;font-weight:700'],['h4','Heading 4','font-size:14px;font-weight:700'],['blockquote','" Quote','font-style:italic;color:#555;border-left:4px solid var(--blue);padding-left:8px'],['pre','⌨ Code','font-family:monospace;background:#f5f5f5;padding:4px 8px;border-radius:3px;font-size:13px']].map(([t,l,s]) =>
+      `<button onclick="applyBlock('${t}');closeFP();" style="text-align:left;padding:9px 12px;border:1px solid #eee;border-radius:7px;background:#fff;cursor:pointer;${s};touch-action:manipulation;">${l}</button>`).join('')}
+    </div></div>`;
+  } else if (type === 'table') {
+    title.textContent = 'Insert Table';
+    body.innerHTML = `<div class="fp-section"><div style="display:flex;flex-direction:column;gap:12px;">
+      <div style="display:flex;align-items:center;gap:12px;"><span style="width:55px;font-size:13px;color:#555;">Rows</span><div class="size-stepper"><button onclick="adjTbl('r',-1)">−</button><div id="tbl-r" style="font-size:20px;font-weight:700;min-width:40px;text-align:center;">${tblR}</div><button onclick="adjTbl('r',1)">+</button></div></div>
+      <div style="display:flex;align-items:center;gap:12px;"><span style="width:55px;font-size:13px;color:#555;">Cols</span><div class="size-stepper"><button onclick="adjTbl('c',-1)">−</button><div id="tbl-c" style="font-size:20px;font-weight:700;min-width:40px;text-align:center;">${tblC}</div><button onclick="adjTbl('c',1)">+</button></div></div>
+      <button onclick="mobInsertTable()" style="padding:12px;background:var(--blue);color:#fff;border:none;border-radius:9px;font-size:15px;cursor:pointer;touch-action:manipulation;">Insert ${tblR}×${tblC} Table</button>
+    </div></div>`;
+  }
+}
+
+function closeFP() {
+  document.getElementById('fmt-panel').classList.remove('open');
+  document.getElementById('fp-overlay').style.display = 'none';
+}
+
+function adjSz(d) {
+  fpSz = Math.max(1, Math.min(144, fpSz + d));
+  const el = document.getElementById('fp-sz'); if (el) el.textContent = fpSz;
+  document.getElementById('font-size').value = fpSz;
+  wrapSel(el => el.style.fontSize = fpSz + 'pt');
+}
+function setSz(s) {
+  fpSz = s;
+  const el = document.getElementById('fp-sz'); if (el) el.textContent = s;
+  document.getElementById('font-size').value = s;
+  wrapSel(el => el.style.fontSize = s + 'pt');
+}
+function applyCustomC() {
+  execCmd('foreColor', document.getElementById('fp-fc').value);
+  execCmd('hiliteColor', document.getElementById('fp-hl').value);
+}
+function adjTbl(which, d) {
+  if (which === 'r') { tblR = Math.max(1, Math.min(20, tblR + d)); const e = document.getElementById('tbl-r'); if (e) e.textContent = tblR; }
+  else { tblC = Math.max(1, Math.min(20, tblC + d)); const e = document.getElementById('tbl-c'); if (e) e.textContent = tblC; }
+}
+function mobInsertTable() { insertTable(tblR, tblC); closeFP(); }
+
+// ══════════════════════════════════════════════════
+//   INIT
+// ══════════════════════════════════════════════════
+updateStatus();
+loadAutoSave();
+editor.focus();
+try {
+  const ir = document.createRange();
+  const is = window.getSelection();
+  ir.selectNodeContents(editor);
+  ir.collapse(false);
+  is.removeAllRanges();
+  is.addRange(ir);
+} catch(e) {}
+
+// Hide tpicker on outside click
+document.addEventListener('click', e => {
+  const tp = document.getElementById('tpicker');
+  if (tpOpen && !tp.contains(e.target) && e.target.id !== 'tbtn') {
+    tp.classList.remove('open');
+    tpOpen = false;
+  }
+}, true);
+</script>
+</body>
+</html>
